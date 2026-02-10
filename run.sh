@@ -17,20 +17,21 @@ fi
 # Environment setup
 export TOKENIZERS_PARALLELISM=false
 export OMP_NUM_THREADS=1
+export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0  # Let PyTorch use all available MPS memory
 
 echo "✓ Environment ready"
 echo ""
 echo "Architecture:"
 echo "  1. LangGraph Workflow → 2 nodes (diagnose → prescribe)"
-echo "  2. MedGemma → AI Diagnosis Generation"
+echo "  2. MedGemma → AI Diagnosis Generation (MPS accelerated)"
 echo ""
 echo "Running 2 tasks:"
 echo "  1. Lipid Profile (Text analysis)"
 echo "  2. CT Coronary (Image + Text analysis)"
 echo ""
-echo "Estimated time: 2-4 minutes (optimized for speed)"
+echo "Estimated time: ~1 minute (MPS float16)"
 echo ""
-sleep 3
+sleep 2
 
 python3 main.py
 

@@ -18,6 +18,7 @@ import logging
 # Setup environment
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"  # Let MPS use all memory
 
 # Configure logging to go to stderr only (not stdout)
 logging.basicConfig(

@@ -1,6 +1,6 @@
 """
 MedGemma Client for Medical Diagnosis
-Supports text-only and multimodal (image + text) inference
+Supports text-only and multimodal (image + text) inference on MPS (Apple Silicon)
 """
 
 import logging
@@ -29,6 +29,7 @@ def load_config():
 class MedGemmaClient:
     """
     Client for google/medgemma-1.5-4b-it
+    Optimized for Apple Silicon MPS acceleration.
     """
 
     def __init__(self, model_id: str = "google/medgemma-1.5-4b-it"):
@@ -36,30 +37,19 @@ class MedGemmaClient:
         self.model = None
         self.processor = None
         self._loaded = False
+        self._device = None
 
         # Load config
         config = load_config()
         model_cfg = (config or {}).get("model", {})
-
-        self.device = model_cfg.get("device", "auto")
-        self.torch_dtype_str = model_cfg.get("torch_dtype", "float16")
-        self.max_new_tokens = model_cfg.get("max_new_tokens", 800)
-
-        gen_cfg = model_cfg.get("generation", {})
-        self.do_sample = gen_cfg.get("do_sample", False)
-        self.repetition_penalty = gen_cfg.get("repetition_penalty", 1.1)
-        
-        # Get HuggingFace token from environment
+        self.max_new_tokens = model_cfg.get("max_new_tokens", 256)
         self.hf_token = os.getenv("HUGGING_FACE_HUB_TOKEN")
 
-        logger.info(
-            f"MedGemmaClient initialized "
-            f"(model={self.model_id}, device={self.device})"
-        )
+        logger.info(f"MedGemmaClient initialized (model={self.model_id})")
 
     # ------------------------------------------------------------------
     def load(self) -> bool:
-        """Load model and processor (lazy loading)."""
+        """Load model and processor."""
         if self._loaded:
             return True
 
@@ -69,62 +59,47 @@ class MedGemmaClient:
 
             os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+            # Resolve device: MPS > CUDA > CPU
+            if torch.backends.mps.is_available():
+                self._device = torch.device("mps")
+            elif torch.cuda.is_available():
+                self._device = torch.device("cuda")
+            else:
+                self._device = torch.device("cpu")
+
             logger.info("Loading MedGemma processor...")
             self.processor = AutoProcessor.from_pretrained(
                 self.model_id,
                 trust_remote_code=True,
-                token=self.hf_token
+                token=self.hf_token,
             )
 
-            # Device selection
-            if self.device == "auto":
-                if torch.cuda.is_available():
-                    target_device = "cuda"
-                elif torch.backends.mps.is_available():
-                    target_device = "mps"
-                else:
-                    target_device = "cpu"
-            else:
-                target_device = self.device
-
-            # Dtype selection
-            # MPS: use float16 with CPU-first loading + greedy decoding
-            # (float32 is too slow on MPS, float16+sampling=gibberish)
-            if self.torch_dtype_str == "float16":
-                torch_dtype = torch.float16
-            elif self.torch_dtype_str == "bfloat16":
-                torch_dtype = torch.bfloat16
-            else:
-                torch_dtype = torch.float32
-            dtype_name = str(torch_dtype).split('.')[-1]
-
-            # MPS strategy: load on CPU first, then move to MPS
-            # This bypasses caching_allocator_warmup which crashes with 16GB buffer
-            if target_device == "mps":
-                logger.info(f"Loading MedGemma on CPU ({dtype_name}), then moving to MPS...")
+            # Load in float16 as requested
+            dtype = torch.float16
+            
+            logger.info(f"Loading model in {dtype} on {self._device} (using device_map)...")
+            try:
                 self.model = AutoModelForImageTextToText.from_pretrained(
                     self.model_id,
-                    device_map="cpu",
-                    dtype=torch_dtype,
+                    torch_dtype=dtype,
+                    device_map=str(self._device),  # Direct load
                     low_cpu_mem_usage=True,
                     trust_remote_code=True,
-                    token=self.hf_token
+                    token=self.hf_token,
                 )
-                logger.info("Moving model to MPS...")
-                self.model = self.model.to("mps")
-            else:
-                logger.info(f"Loading MedGemma on {target_device} ({dtype_name})...")
-                self.model = AutoModelForImageTextToText.from_pretrained(
-                    self.model_id,
-                    device_map=target_device,
-                    dtype=torch_dtype,
-                    low_cpu_mem_usage=True,
-                    trust_remote_code=True,
-                    token=self.hf_token
-                )
+            except Exception as load_err:
+                logger.error(f"Failed to load in {dtype}: {load_err}")
+                raise load_err
+
+            self.model.eval()
+
+            # Override the model's generation_config so our settings win.
+            self.model.generation_config.do_sample = False
+            self.model.generation_config.temperature = 1.0
+            self.model.generation_config.top_p = 1.0
 
             self._loaded = True
-            logger.info("✅ MedGemma model loaded successfully")
+            logger.info(f"✅ MedGemma loaded on {self._device} ({dtype})")
             return True
 
         except Exception as e:
@@ -138,208 +113,151 @@ class MedGemmaClient:
         image_path: Optional[str] = None,
         max_new_tokens: Optional[int] = None,
     ) -> str:
-        """Generate diagnosis using MedGemma."""
+        """Generate a medical diagnosis from text (and optionally an image)."""
         if not self._loaded and not self.load():
             raise RuntimeError("MedGemma model failed to load")
-
-        if max_new_tokens is None:
-            max_new_tokens = self.max_new_tokens
 
         import torch
         from PIL import Image
 
-        # Build prompt
-        full_prompt = self._build_medical_prompt(prompt)
+        if max_new_tokens is None:
+            max_new_tokens = self.max_new_tokens
 
-        messages = self._prepare_messages(full_prompt, image_path)
+        # --- build chat messages -----------------------------------------
+        full_prompt = f"""
+            You are a medical AI assistant.
 
-        # Apply chat template
-        try:
-            chat_prompt = self.processor.apply_chat_template(
-                messages,
-                add_generation_prompt=True,
-                tokenize=False
-            )
-        except Exception:
-            chat_prompt = ""
+            Analyze the clinical case below and provide a concise, professional medical assessment.
 
-        # Fallback Gemma format
-        if "<start_of_turn>" not in chat_prompt:
-            if isinstance(messages[0]["content"], list):
-                user_text = next(
-                    x["text"] for x in messages[0]["content"]
-                    if x["type"] == "text"
-                )
-            else:
-                user_text = messages[0]["content"]
+            INSTRUCTIONS:
+            - Do NOT repeat the input text
+            - Do NOT mention being an AI
+            - Use clear medical terminology
+            - Be factual and cautious
+            - If information is insufficient, state reasonable assumptions
 
-            # Manually construct prompt with BOS
-            chat_prompt = (
-                "<bos><start_of_turn>user\n"
-                f"{user_text}"
-                "<end_of_turn>\n"
-                "<start_of_turn>model\n"
-            )
-        elif not chat_prompt.startswith("<bos>"):
-            # Ensure BOS is present if template didn't add it
-            chat_prompt = "<bos>" + chat_prompt
+            OUTPUT FORMAT (strict):
+            1. Clinical Summary (2–3 sentences)
+            2. Key Findings
+            3. Likely Diagnosis
+            4. Risk Assessment
+            5. Suggested Next Steps
 
-        # Ensure image token structure for PaliGemma/MedGemma
-        if image_path and os.path.exists(image_path) and "<image>" not in chat_prompt:
-            # Prepend image token after BOS if BOS exists, else at start
-            if chat_prompt.startswith("<bos>"):
-                chat_prompt = chat_prompt.replace("<bos>", "<bos><image>\n", 1)
-            else:
-                chat_prompt = "<image>\n" + chat_prompt
+            CLINICAL CASE:
+            {prompt}
+            """.strip()
+        has_image = image_path and os.path.exists(image_path)
 
-        logger.debug(f"Final prompt:\n{chat_prompt}")
-
-        # Prepare inputs
-        if image_path and os.path.exists(image_path):
-            image = Image.open(image_path).convert("RGB")
-            inputs = self.processor(
-                text=chat_prompt,
-                images=image,
-                return_tensors="pt",
-                add_special_tokens=False
-            ).to(self.model.device)
-        else:
-            inputs = self.processor(
-                text=chat_prompt,
-                return_tensors="pt",
-                add_special_tokens=False
-            ).to(self.model.device)
-
-        logger.info(f"Generating diagnosis (max_tokens={max_new_tokens})...")
-        start = time.time()
-
-        # Sanitize logits to fix float16 inf/nan on MPS before sampling
-        from transformers import LogitsProcessor, LogitsProcessorList
-
-        class SanitizeLogitsProcessor(LogitsProcessor):
-            """Cast logits to float32 and replace inf/nan to prevent sampling crashes on MPS."""
-            def __call__(self, input_ids, scores):
-                scores = scores.float()
-                scores = torch.where(
-                    torch.isfinite(scores), scores, torch.full_like(scores, -1e4)
-                )
-                return scores
-
-        logits_processors = LogitsProcessorList([SanitizeLogitsProcessor()])
-
-        # On MPS with float16, use greedy decoding to avoid numerical noise
-        # that sampling (softmax) amplifies into gibberish
-        is_mps = str(self.model.device).startswith("mps")
-
-        with torch.no_grad():
-            if is_mps:
-                logger.info("Using greedy decoding (MPS float16 stability)")
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=False,
-                    repetition_penalty=1.1,
-                    pad_token_id=self.processor.tokenizer.pad_token_id,
-                    eos_token_id=self.processor.tokenizer.eos_token_id,
-                    logits_processor=logits_processors,
-                )
-            else:
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=True,
-                    temperature=0.7,
-                    top_p=0.9,
-                    repetition_penalty=1.1,
-                    pad_token_id=self.processor.tokenizer.pad_token_id,
-                    eos_token_id=self.processor.tokenizer.eos_token_id,
-                    logits_processor=logits_processors,
-                )
-
-        # Decode output
-        decoded = self.processor.decode(
-            outputs[0],
-            skip_special_tokens=True
-        )
-
-        logger.debug(f"Raw output:\n{decoded}")
-
-        response = self._extract_response(decoded)
-        response = self._post_process_response(response)
-
-        elapsed = time.time() - start
-        logger.info(f"✅ Generated {len(response)} chars in {elapsed:.1f}s")
-
-        return response
-
-    # ------------------------------------------------------------------
-    def _build_medical_prompt(self, case_text: str) -> str:
-        return (
-            "Analyze this medical case and provide a clinical assessment.\n\n"
-            f"{case_text}"
-        )
-
-    # ------------------------------------------------------------------
-    def _prepare_messages(self, prompt: str, image_path: Optional[str]):
-        if image_path and os.path.exists(image_path):
-            return [{
+        if has_image:
+            messages = [{
                 "role": "user",
                 "content": [
                     {"type": "image"},
-                    {"type": "text", "text": prompt},
+                    {"type": "text", "text": full_prompt},
                 ],
             }]
-        return [{"role": "user", "content": prompt}]
+        else:
+            messages = [{"role": "user", "content": full_prompt}]
+
+        # --- tokenise with chat template ---------------------------------
+        chat_text = (
+            "<bos><start_of_turn>user\n"
+            f"{full_prompt}\n"
+            "<end_of_turn>\n"
+            "<start_of_turn>model\n\n"
+        )
+
+        # Ensure Gemma-style turn markers are present
+        if "<start_of_turn>" not in chat_text:
+            chat_text = (
+                "<bos><start_of_turn>user\n"
+                f"{full_prompt}\n"
+                "<end_of_turn>\n"
+                "<start_of_turn>model\n"
+            )
+
+        # --- prepare model inputs ----------------------------------------
+        if has_image:
+            image = Image.open(image_path).convert("RGB")
+            inputs = self.processor(
+                text=chat_text,
+                images=image,
+                return_tensors="pt",
+                add_special_tokens=False,
+            ).to(self._device)
+        else:
+            inputs = self.processor(
+                text=chat_text,
+                return_tensors="pt",
+                add_special_tokens=False,
+            ).to(self._device)
+
+        # --- generate ----------------------------------------------------
+        logger.info(f"Generating diagnosis (max_tokens={max_new_tokens})...")
+        start = time.time()
+        
+        with torch.no_grad():
+            output_ids = self.model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=False,
+                # NOTE: no repetition_penalty — torch.gather is broken/slow on MPS
+            )
+            
+        decoded = self.processor.decode(output_ids[0], skip_special_tokens=True)
+        logger.debug(f"Raw output:\n{decoded}")
+
+        response = self._extract_response(decoded)
+        response = self._post_process(response)
+
+        elapsed = time.time() - start
+        logger.info(f"✅ Generated {len(response)} chars in {elapsed:.1f}s")
+        return response
 
     # ------------------------------------------------------------------
     def _extract_response(self, text: str) -> str:
+        """Pull out only the model's reply from the decoded string."""
         text = text.strip()
 
-        # If explicit Gemma format "model" turn is present, take what comes after
+        # Gemma format: everything after the last "model\n"
         if "model\n" in text:
-            parts = text.split("model\n")
-            if len(parts) > 1:
-                return parts[-1].strip()
-        
-        # Handle case without newline
-        if "model" in text:
-            # Find the last occurrence of model
-            idx = text.rfind("model")
-            if idx != -1:
-                candidate = text[idx + 5:].strip()
-                # Only accept if it looks like the start of generation
-                if candidate.startswith(":"):
-                    candidate = candidate[1:].strip()
+            return text.split("model\n")[-1].strip()
+
+        # Fallback: after last "model" keyword
+        idx = text.rfind("model")
+        if idx != -1:
+            candidate = text[idx + 5:].lstrip(": \n")
+            if candidate:
                 return candidate
 
         return text
 
     # ------------------------------------------------------------------
-    def _post_process_response(self, response: str) -> str:
+    def _post_process(self, response: str) -> str:
+        """Add disclaimer if missing."""
         response = response.strip()
-
         disclaimer = (
             "*Disclaimer: AI-generated assessment for educational purposes. "
             "Consult healthcare professionals.*"
         )
-
         if "disclaimer" not in response.lower():
             response += f"\n\n---\n{disclaimer}"
-
         return response
 
     # ------------------------------------------------------------------
     def cleanup(self):
-        """Free memory."""
+        """Free model memory."""
         try:
-            import torch, gc
+            import torch
+            import gc
+
             del self.model
             del self.processor
             gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
             if torch.backends.mps.is_available():
                 torch.mps.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         except Exception:
             pass
 

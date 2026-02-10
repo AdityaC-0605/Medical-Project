@@ -3,18 +3,17 @@
 # Model Configuration
 model:
   model_name: "google/medgemma-1.5-4b-it"
-  device: "auto"  # Options: "auto", "cuda", "mps", "cpu". Auto will select best available.
-  torch_dtype: "float16"  # Options: "float16", "bfloat16", "float32"
-  max_new_tokens: 800  # Increased for complete medical analysis
+  device: "auto"  # Options: "auto", "cuda", "mps", "cpu". Auto prefers MPS on Apple Silicon.
+  torch_dtype: "float16"  
+  max_new_tokens: 256  # Fast MPS inference
   trust_remote_code: true
   use_real_model: true  # Use real MedGemma model (cached locally)
   
-  # Generation Parameters - Using sampling for better quality output
+  # Generation Parameters — greedy decoding for fast, deterministic MPS output
   generation:
-    do_sample: true         # Sampling - better quality text generation
-    temperature: 0.7        # Controls randomness (lower = more focused)
-    top_p: 0.9              # Nucleus sampling threshold
-    repetition_penalty: 1.1 # Slight penalty for repetition
+    do_sample: false        # Greedy decoding — fast and deterministic
+    temperature: 1.0        # Not used with greedy, but set for safety
+    top_p: 1.0              # Not used with greedy, but set for safety
 
 # LangGraph Configuration
 workflow:
