@@ -1,0 +1,154 @@
+BI-RADS Breast Imaging Classification and Interpretation Guidelines
+
+ACR BI-RADS ATLAS OVERVIEW
+The Breast Imaging-Reporting and Data System (BI-RADS) provides standardized breast imaging terminology, report organization, assessment structure, and a classification system for mammography, ultrasound, and MRI.
+
+BI-RADS ASSESSMENT CATEGORIES
+
+BI-RADS 0: Incomplete - Need Additional Imaging
+- Description: Needs additional imaging evaluation
+- Indications: Prior films not available, technically inadequate study
+- Recommendation: Complete imaging workup before final assessment
+- Clinical implications: Suspicious or normal, cannot determine without complete evaluation
+
+BI-RADS 1: Negative
+- Description: Nothing to report; no abnormalities
+- Imaging findings: Completely normal study
+- Recommendation: Routine screening
+- Cancer risk: <1%
+- Clinical action: Continue regular screening schedule
+
+BI-RADS 2: Benign Findings
+- Description: Benign finding with 100% certainty
+- Common examples: Calcified fibroadenoma, skin calcifications, lipomas
+- Recommendation: Routine screening
+- Cancer risk: 0%
+- Clinical action: No additional imaging needed
+
+BI-RADS 3: Probably Benign
+- Description: Finding with <2% probability of malignancy
+- Common examples: Probably benign calcifications, focal asymmetry
+- Recommendation: Short-interval follow-up (typically 6 months)
+- Cancer risk: <2%
+- Clinical action: Follow-up imaging to confirm stability
+
+BI-RADS 4: Suspicious
+- Description: Finding with moderate suspicion of malignancy
+- Subcategories based on suspicion level:
+  * 4A: Low suspicion (2-10% risk)
+  * 4B: Moderate suspicion (10-50% risk)
+  * 4C: High suspicion (50-95% risk)
+- Recommendation: Biopsy should be considered
+- Clinical action: Tissue diagnosis recommended
+
+BI-RADS 5: Highly Suggestive of Malignancy
+- Description: Finding with high probability of malignancy (>95%)
+- Typical examples: Spiculated mass, segmental microcalcifications
+- Recommendation: Appropriate action should be taken
+- Clinical action: Biopsy and surgical consultation
+
+BI-RADS 6: Known Biopsy-Proven Malignancy
+- Description: Imaging after cancer diagnosis, before treatment
+- Purpose: Monitor treatment response, evaluate extent
+- Recommendation: Surgical planning, treatment monitoring
+- Clinical action: Multidisciplinary management
+
+MAMMOGRAPHY FEATURES AND INTERPRETATION
+
+Mass Characteristics:
+- Shape:
+  * Round: Circular in shape
+  * Oval: Elliptical or egg-shaped
+  * Irregular: Neither round nor oval
+- Margin:
+  * Circumscribed: Sharp, well-defined borders
+  * Microlobulated: Small undulating circles
+  * Obscured: Hidden by adjacent tissue
+  * Ill-defined: Poorly defined borders
+  * Spiculated: Radiating lines from mass center
+- Density:
+  * High density: More dense than surrounding fibroglandular tissue
+  * Equal density: Same density as fibroglandular tissue
+  * Low density: Less dense than fibroglandular tissue
+  * Fat-containing: Contains fat density areas
+
+Calcification Characteristics:
+- Morphology:
+  * Benign: Skin calcifications, vascular calcifications, milk of calcium
+  * Suspicious: Amorphous, coarse heterogeneous, fine pleomorphic, fine linear
+- Distribution:
+  * Diffuse: Scattered throughout breast
+  * Regional: Larger area not conforming to duct distribution
+  * Segmental: Conforming to duct distribution suggesting single duct
+  * Linear: Arranged in a line suggesting ducts
+  * Clustered: At least 5 calcifications within 1 cm
+
+ULTRASOUND FEATURES
+Mass Characteristics:
+- Shape: Oval, round, or irregular
+- Orientation: Parallel (wider than tall) or not parallel (taller than wide)
+- Margin: Circumscribed, not circumscribed, ill-defined, angular, microlobulated, spiculated
+- Echo pattern: Anechoic, hyperechoic, complex, hypoechoic, isoechoic
+- Posterior features: Enhancement, shadowing, combined pattern
+- Calcifications: Present or absent, macro or micro
+
+Vascularity:
+- Absent, internal, or peripheral vascularity
+- Increased vascularity may suggest malignancy
+
+Elasticity Assessment:
+- Strain elastography: Ratio measurements
+- Shear wave elastography: Stiffness measurements
+- Higher stiffness suggests malignancy
+
+MRI BI-RADS FEATURES
+Enhancement Kinetics:
+- Initial phase: Slow, medium, or rapid enhancement
+- Delayed phase: Persistent, plateau, or washout pattern
+- Type 1 (persistent): Usually benign
+- Type 2 (plateau): Intermediate concern
+- Type 3 (washout): Suspicious
+
+Morphology:
+- Shape: Round, oval, irregular, lobulated
+- Margin: Smooth, irregular, spiculated
+- Internal enhancement: Homogeneous, heterogeneous, rim enhancement, dark internal septations
+
+CLINICAL MANAGEMENT GUIDELINES
+
+Age-Appropriate Screening:
+- Average risk: Begin at age 40, continue annually
+- High risk: Begin earlier, may include supplemental imaging
+- Personal history of breast cancer: Annual mammography + MRI
+
+High-Risk Patient Management:
+- Genetic mutations (BRCA1/2): Annual MRI beginning at 25, mammography at 30
+- Family history: Consider earlier screening, supplemental imaging
+- Prior chest radiation: Begin screening 8-10 years after exposure
+
+Follow-Up Protocols:
+- BI-RADS 3: 6-month follow-up for 2-3 years, then return to routine screening
+- BI-RADS 4A: May consider vacuum-assisted biopsy
+- BI-RADS 4B/C: Core needle biopsy recommended
+- BI-RADS 5: Core needle biopsy + surgical consultation
+
+Special Considerations:
+- Dense breast tissue: May require supplemental imaging (ultrasound, MRI)
+- Pregnancy: Ultrasound preferred, mammography only if necessary
+- Breast implants: Special implant displacement views needed
+
+PATIENT COMMUNICATION GUIDELINES
+Risk Communication:
+- Explain BI-RADS category in clear, understandable terms
+- Provide absolute risk percentages when available
+- Discuss benefits and risks of recommended procedures
+- Address patient anxiety and concerns
+
+Shared Decision-Making:
+- Present all reasonable options
+- Consider patient preferences and values
+- Discuss impact on quality of life
+- Provide educational resources
+
+Safety Information:
+These guidelines are for educational purposes and should not replace clinical judgment. Individual patient circumstances may modify general recommendations. All imaging interpretation should be performed by qualified healthcare professionals.

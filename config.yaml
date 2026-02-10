@@ -1,0 +1,80 @@
+# Medical AI Evaluation Configuration
+
+# Model Configuration
+model:
+  model_name: "google/medgemma-1.5-4b-it"
+  device: "cpu"
+  torch_dtype: "float32"
+  max_new_tokens: 500
+  trust_remote_code: true
+  use_real_model: true  # Use real MedGemma model (cached locally)
+
+# RAG Configuration
+rag:
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  vector_store:
+    type: "simple"
+    dimension: 384
+  retrieval:
+    top_k: 3
+    similarity_threshold: 0.5
+
+# LangGraph Configuration
+workflow:
+  timeout: 600  # Increased for real model inference
+  max_retries: 0
+  safety_check_interval: 1
+
+# Safety Configuration
+safety:
+  blocked_terms:
+    - "cure"
+    - "definitive"
+    - "conclusively"
+  required_disclaimers:
+    - "This is for informational purposes only"
+    - "Consult with healthcare professionals"
+  max_response_length: 2000
+
+# Prescription Configuration
+prescription:
+  enabled: true
+  include_medications: true
+  include_lifestyle_recommendations: true
+  require_physician_review: true
+  disclaimer_required: true
+
+# Task Configuration
+tasks:
+  ct_coronary:
+    enabled: true
+    knowledge_domains: ["cardiology", "coronary_artery_disease"]
+  lipid_profile:
+    enabled: true
+    knowledge_domains: ["cardiology", "lipid_management"]
+  breast_imaging:
+    enabled: true
+    knowledge_domains: ["radiology", "breast_imaging", "birads"]
+  biopsy_report:
+    enabled: true
+    knowledge_domains: ["pathology", "cancer_grading"]
+
+# Data Configuration
+data:
+  raw_data_path: "data/raw"
+  processed_data_path: "data/processed"
+  knowledge_base_path: "data/knowledge_base"
+  synthetic_data_ratio: 0.3
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "medical_correctness"
+    - "safety_compliance"
+  output_path: "results/evaluation"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/medical_ai_evaluation.log"

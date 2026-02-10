@@ -1,0 +1,52 @@
+ACC/AHA Guidelines for Cardiovascular Disease Risk Assessment and Management
+
+CHOLESTEROL MANAGEMENT GUIDELINES
+
+LDL Cholesterol Risk Categories:
+- Optimal: <100 mg/dL
+- Near optimal: 100-129 mg/dL
+- Borderline high: 130-159 mg/dL
+- High: 160-189 mg/dL
+- Very high: ≥190 mg/dL
+
+Risk Assessment Considerations:
+- LDL cholesterol is primary target for therapy
+- Age, smoking status, blood pressure, and family history modify risk
+- Diabetes mellitus is considered a coronary heart disease risk equivalent
+
+HDL Cholesterol Interpretation:
+- High HDL (≥60 mg/dL): Considered protective against cardiovascular disease
+- Low HDL (<40 mg/dL in men, <50 mg/dL in women): Associated with increased cardiovascular risk
+
+Triglyceride Classification:
+- Normal: <150 mg/dL
+- Borderline high: 150-199 mg/dL
+- High: 200-499 mg/dL
+- Very high: ≥500 mg/dL
+
+Non-Pharmacologic Interventions:
+- Therapeutic lifestyle changes should be first-line therapy for borderline abnormalities
+- Dietary modifications include reduced saturated fat and increased fiber intake
+- Regular aerobic exercise recommended for all risk categories
+- Weight management for overweight individuals
+
+Risk Enhancement Factors:
+- Family history of premature cardiovascular disease
+- Metabolic syndrome
+- Chronic kidney disease
+- Inflammatory conditions (e.g., rheumatoid arthritis)
+- Elevated high-sensitivity C-reactive protein
+
+Clinical Decision-Making:
+- Treatment decisions should incorporate absolute cardiovascular risk
+- Patient preferences and comorbidities guide therapy choices
+- Regular monitoring of lipid levels recommended during therapy
+- Lifestyle modifications should be emphasized regardless of pharmacologic therapy
+
+Risk Communication:
+- Explain cardiovascular risk in absolute terms (e.g., 10-year risk)
+- Discuss benefits and risks of potential interventions
+- Emphasize shared decision-making in treatment planning
+- Provide educational materials about cardiovascular health
+
+Note: This information is for educational purposes and should not replace clinical judgment or professional medical advice.

@@ -1,0 +1,109 @@
+Coronary Artery Disease: CT Coronary Angiography Interpretation Guidelines
+
+CORONARY ARTERY ANATOMY
+Major Coronary Arteries:
+- Left Main (LM): Truncates into LAD and LCX
+- Left Anterior Descending (LAD): Supplies anterior wall and septum
+- Left Circumflex (LCX): Supplies lateral wall
+- Right Coronary Artery (RCA): Supplies inferior wall and right ventricle
+
+STENOSIS CLASSIFICATION
+Stenosis Severity Categories:
+- Minimal: <25% stenosis (hemodynamically insignificant)
+- Mild: 25-49% stenosis (generally not flow-limiting)
+- Moderate: 50-69% stenosis (may be significant with symptoms)
+- Severe: 70-89% stenosis (typically flow-limiting)
+- Critical: ≥90% stenosis (high-risk lesion)
+- Total occlusion: 100% stenosis (complete blockage)
+
+HEMODYNAMIC SIGNIFICANCE
+Functional Assessment:
+- Lesions <50% diameter stenosis: Rarely cause ischemia
+- Lesions 50-70%: May be significant depending on:
+  * Lesion length
+  * Reference vessel diameter
+  * Presence of collateral circulation
+  * Myocardial territory at risk
+- Lesions >70%: Generally considered hemodynamically significant
+
+PLAQUE CHARACTERISTICS
+Plaque Types and Clinical Implications:
+
+Calcified Plaque:
+- High-density on CT (>130 Hounsfield units)
+- Generally stable, lower rupture risk
+- Associated with chronic stable disease
+- More common in older patients
+- May be challenging for stent deployment
+
+Soft (Non-calcified) Plaque:
+- Low-density on CT (<50 Hounsfield units)
+- Higher risk of rupture and thrombosis
+- Associated with acute coronary syndromes
+- More common in younger patients
+- May indicate vulnerable plaque
+
+Mixed Plaque:
+- Combination of calcified and non-calcified components
+- Intermediate stability characteristics
+- Common in multi-vessel disease
+- Requires comprehensive risk assessment
+
+CLINICAL CONTEXT CONSIDERATIONS
+Patient Factors Influencing Significance:
+- Age and overall health status
+- Presence of symptoms (angina, dyspnea)
+- Functional capacity
+- Comorbidities (diabetes, renal disease)
+- Previous coronary interventions
+
+Lesion Location Considerations:
+- Proximal lesions: Higher clinical significance
+- Left main disease: High-risk, often surgical consideration
+- Bifurcation lesions: Complex, higher intervention risk
+- Small vessel disease: Technical challenges
+
+RISK STRATIFICATION
+High-Risk Features:
+- Left main stenosis ≥50%
+- Proximal LAD stenosis ≥70%
+- Multi-vessel disease with proximal lesions
+- Vulnerable plaque characteristics
+- Recent symptom worsening
+
+Intermediate-Risk Features:
+- Single vessel disease, non-proximal
+- Moderate calcification
+- Stable symptoms
+- Good functional capacity
+
+Low-Risk Features:
+- Minimal or mild disease
+- Distal vessel involvement
+- No symptoms
+- Excellent functional status
+
+FOLLOW-UP RECOMMENDATIONS
+Guideline-Based Surveillance:
+- Minimal disease: Routine follow-up, risk factor modification
+- Moderate disease: Consider functional testing, aggressive risk management
+- Severe disease: Cardiology referral, consider intervention
+- Critical disease: Urgent cardiology evaluation
+
+Lifestyle and Risk Factor Management:
+- Smoking cessation (critical for plaque stability)
+- Blood pressure control (<130/80 mmHg)
+- Lipid management (LDL targets based on risk)
+- Diabetes control (HbA1c <7%)
+- Regular aerobic exercise
+- Weight management
+
+Technical Considerations:
+- Image quality affects diagnostic accuracy
+- Motion artifacts can obscure lesions
+- Heavy calcification may limit luminal assessment
+- Contrast timing crucial for optimal visualization
+- Multiple viewing angles recommended
+
+Safety Information:
+This information is for educational purposes only. Clinical interpretation should be performed by qualified healthcare professionals. Individual patient circumstances may modify these general recommendations.
