@@ -21,7 +21,6 @@ class MedicalState:
     task_type: str
     input_data: Dict[str, Any]
     query: str = ""
-    retrieved_context: str = ""
     diagnosis: str = ""
     prescription: Optional[Dict] = None
     status: WorkflowStatus = field(default_factory=lambda: WorkflowStatus.PENDING)

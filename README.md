@@ -1,20 +1,19 @@
-# Medical AI System - RAG + LangGraph + MedGemma
+# Medical AI System - LangGraph + MedGemma
 
-A medical AI system using **Retrieval-Augmented Generation (RAG)**, **LangGraph workflow**, and **MedGemma** for diagnosis and prescription generation.
+A medical AI system using **LangGraph workflow** and **MedGemma** for diagnosis and prescription generation.
 
 ## Architecture
 
 ```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  RETRIEVE   │───→│   DIAGNOSE  │───→│  PRESCRIBE  │
-│  (RAG)      │    │  (MedGemma) │    │(Prescription│
-│             │    │             │    │  Generator) │
-└─────────────┘    └─────────────┘    └─────────────┘
+┌─────────────┐    ┌─────────────┐
+│   DIAGNOSE  │───→│  PRESCRIBE  │
+│  (MedGemma) │    │(Prescription│
+│             │    │  Generator) │
+└─────────────┘    └─────────────┘
 ```
 
 **Components:**
-- **RAG Engine**: Retrieves medical knowledge from embedded guidelines
-- **LangGraph**: 3-node workflow orchestration
+- **LangGraph**: 2-node workflow orchestration (diagnose → prescribe)
 - **MedGemma**: `google/medgemma-1.5-4b-it` for AI diagnosis
 - **Prescription Generator**: Creates treatment plans based on diagnosis
 
@@ -28,7 +27,6 @@ Medical-Project/
 │   ├── graph.py                    # LangGraph workflow
 │   └── core/
 │       ├── __init__.py
-│       ├── rag_engine.py           # RAG retrieval
 │       ├── medgemma_client.py      # MedGemma integration
 │       └── prescription_generator.py
 ├── data/
@@ -56,13 +54,11 @@ The system runs 2 medical tasks:
 
 ### 1. Lipid Profile Analysis (Text)
 - **Input**: LDL, HDL, Triglycerides, Total Cholesterol, Age, Sex
-- **RAG**: Retrieves cardiology guidelines
 - **MedGemma**: Generates detailed diagnosis
 - **Output**: Medication recommendations + lifestyle changes
 
 ### 2. CT Coronary Angiography (Image + Text)
 - **Input**: Medical image + stenosis data
-- **RAG**: Retrieves radiology guidelines
 - **MedGemma**: Multimodal diagnosis
 - **Output**: Cardiac treatment plan
 

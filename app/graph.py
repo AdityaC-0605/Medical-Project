@@ -6,7 +6,6 @@ import logging
 from typing import Optional
 
 from app.state import MedicalState, WorkflowStatus
-from app.core.rag_engine import SimpleRAG
 from app.core.medgemma_client import MedGemmaClient
 from app.core.prescription_generator import PrescriptionGenerator
 
@@ -16,13 +15,12 @@ logger = logging.getLogger(__name__)
 class MedicalGraph:
     """
     LangGraph workflow for medical diagnosis and prescription.
-    
+
     Workflow:
-        retrieve → diagnose → prescribe
+        diagnose → prescribe
     """
-    
+
     def __init__(self):
-        self.rag = SimpleRAG()
         self.medgemma = MedGemmaClient()
         self.prescription_gen = PrescriptionGenerator()
         self.graph = self._build_graph()
@@ -32,54 +30,25 @@ class MedicalGraph:
         """Build LangGraph workflow."""
         try:
             from langgraph.graph import StateGraph, END
-            
+
             workflow = StateGraph(MedicalState)
-            
+
             # Add nodes
-            workflow.add_node("retrieve", self._retrieve_node)
             workflow.add_node("diagnose", self._diagnose_node)
             workflow.add_node("prescribe", self._prescribe_node)
-            
+
             # Set entry point
-            workflow.set_entry_point("retrieve")
-            
+            workflow.set_entry_point("diagnose")
+
             # Define edges
-            workflow.add_edge("retrieve", "diagnose")
             workflow.add_edge("diagnose", "prescribe")
             workflow.add_edge("prescribe", END)
-            
+
             return workflow.compile()
-            
+
         except ImportError:
             logger.warning("LangGraph not available, using sequential fallback")
             return SequentialWorkflow(self)
-    
-    def _retrieve_node(self, state: MedicalState) -> MedicalState:
-        """RAG retrieval node."""
-        logger.info(f"Node: RETRIEVE (Task: {state.task_type})")
-        
-        try:
-            # Determine domain
-            domain_map = {
-                "lipid_profile": "cardiology",
-                "ct_coronary": "radiology",
-                "breast_imaging": "radiology",
-                "biopsy_report": "pathology"
-            }
-            domain = domain_map.get(state.task_type)
-            
-            # Retrieve context
-            context = self.rag.retrieve(state.query, domain=domain)
-            state.retrieved_context = context
-            state.status = WorkflowStatus.REASONING
-            
-            logger.info(f"✓ Retrieved {len(context)} chars of context")
-            return state
-            
-        except Exception as e:
-            logger.error(f"Retrieval error: {e}")
-            state.fail(f"Retrieval failed: {e}")
-            return state
     
     def _diagnose_node(self, state: MedicalState) -> MedicalState:
         """MedGemma diagnosis node."""
@@ -96,7 +65,6 @@ class MedicalGraph:
             # Generate diagnosis
             diagnosis = self.medgemma.generate_diagnosis(
                 prompt=state.query,
-                context=state.retrieved_context,
                 image_path=image_path
             )
             
@@ -158,7 +126,24 @@ class MedicalGraph:
         logger.info(f"{'='*60}")
         
         # Execute graph
-        final_state = self.graph.invoke(state)
+        result = self.graph.invoke(state)
+        
+        # Handle both dict and MedicalState return types
+        if isinstance(result, dict):
+            # Convert dict back to MedicalState if needed
+            final_state = MedicalState(
+                task_type=result.get('task_type', task_type),
+                input_data=result.get('input_data', input_data),
+                query=result.get('query', query),
+                diagnosis=result.get('diagnosis', ''),
+                prescription=result.get('prescription'),
+                status=result.get('status', WorkflowStatus.FAILED),
+                error=result.get('error', ''),
+                start_time=result.get('start_time', state.start_time),
+                end_time=result.get('end_time')
+            )
+        else:
+            final_state = result
         
         return final_state
     
@@ -200,16 +185,11 @@ class SequentialWorkflow:
     
     def invoke(self, state: MedicalState) -> MedicalState:
         """Execute workflow sequentially."""
-        # Retrieve
-        state = self.graph._retrieve_node(state)
-        if state.status == WorkflowStatus.FAILED:
-            return state
-        
         # Diagnose
         state = self.graph._diagnose_node(state)
         if state.status == WorkflowStatus.FAILED:
             return state
-        
+
         # Prescribe
         state = self.graph._prescribe_node(state)
         return state

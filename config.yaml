@@ -3,21 +3,18 @@
 # Model Configuration
 model:
   model_name: "google/medgemma-1.5-4b-it"
-  device: "cpu"
-  torch_dtype: "float32"
-  max_new_tokens: 500
+  device: "auto"  # Options: "auto", "cuda", "mps", "cpu". Auto will select best available.
+  torch_dtype: "float16"  # Options: "float16", "bfloat16", "float32"
+  max_new_tokens: 800  # Increased for complete medical analysis
   trust_remote_code: true
   use_real_model: true  # Use real MedGemma model (cached locally)
-
-# RAG Configuration
-rag:
-  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
-  vector_store:
-    type: "simple"
-    dimension: 384
-  retrieval:
-    top_k: 3
-    similarity_threshold: 0.5
+  
+  # Generation Parameters - Using sampling for better quality output
+  generation:
+    do_sample: true         # Sampling - better quality text generation
+    temperature: 0.7        # Controls randomness (lower = more focused)
+    top_p: 0.9              # Nucleus sampling threshold
+    repetition_penalty: 1.1 # Slight penalty for repetition
 
 # LangGraph Configuration
 workflow:
@@ -31,6 +28,8 @@ safety:
     - "cure"
     - "definitive"
     - "conclusively"
+    - "guaranteed"
+    - "100%"
   required_disclaimers:
     - "This is for informational purposes only"
     - "Consult with healthcare professionals"
@@ -48,16 +47,16 @@ prescription:
 tasks:
   ct_coronary:
     enabled: true
-    knowledge_domains: ["cardiology", "coronary_artery_disease"]
+    description: "CT Coronary Angiography analysis with image interpretation"
   lipid_profile:
     enabled: true
-    knowledge_domains: ["cardiology", "lipid_management"]
+    description: "Lipid profile analysis and cardiovascular risk assessment"
   breast_imaging:
     enabled: true
-    knowledge_domains: ["radiology", "breast_imaging", "birads"]
+    description: "Breast imaging analysis with BI-RADS classification"
   biopsy_report:
     enabled: true
-    knowledge_domains: ["pathology", "cancer_grading"]
+    description: "Pathology report interpretation and analysis"
 
 # Data Configuration
 data:
