@@ -55,26 +55,45 @@ class MedicalGraph:
         logger.info("Node: DIAGNOSE (MedGemma)")
         
         try:
+            
+            # Handle both dataclass and dict (LangGraph converts to dict internally)
+            if isinstance(state, dict):
+                task_type = state.get('task_type')
+                input_data = state.get('input_data') or {}
+                query = state.get('query', '')
+            else:
+                task_type = state.task_type
+                input_data = state.input_data or {}
+                query = state.query
+            
             # Get image path if multimodal task
             image_path = None
-            if state.task_type in ["ct_coronary", "breast_imaging"]:
-                image_path = state.input_data.get("image_path")
+            if task_type in ["ct_coronary", "breast_imaging"]:
+                image_path = input_data.get("image_path") if input_data else None
                 if image_path and not __import__('os').path.exists(image_path):
                     image_path = None
             
             # Generate diagnosis
             diagnosis = self.medgemma.generate_diagnosis(
-                prompt=state.query,
+                prompt=query,
                 image_path=image_path
             )
             
-            state.diagnosis = diagnosis
+            # Update state (works with both dict and dataclass)
+            if isinstance(state, dict):
+                state['diagnosis'] = diagnosis
+            else:
+                state.diagnosis = diagnosis
             logger.info(f"✓ Diagnosis generated ({len(diagnosis)} chars)")
             return state
             
         except Exception as e:
             logger.error(f"Diagnosis error: {e}")
-            state.fail(f"Diagnosis generation failed: {e}")
+            if isinstance(state, dict):
+                state['error'] = f"Diagnosis generation failed: {e}"
+                state['status'] = 'failed'
+            else:
+                state.fail(f"Diagnosis generation failed: {e}")
             return state
     
     def _prescribe_node(self, state: MedicalState) -> MedicalState:
@@ -82,22 +101,43 @@ class MedicalGraph:
         logger.info("Node: PRESCRIBE")
         
         try:
+            # Handle both dataclass and dict (LangGraph converts to dict internally)
+            if isinstance(state, dict):
+                task_type = state.get('task_type')
+                input_data = state.get('input_data') or {}
+                diagnosis = state.get('diagnosis', '')
+            else:
+                task_type = state.task_type
+                input_data = state.input_data or {}
+                diagnosis = state.diagnosis
+            
             # Generate prescription
             prescription = self.prescription_gen.generate(
-                task_type=state.task_type,
-                input_data=state.input_data,
-                diagnosis=state.diagnosis
+                task_type=task_type,
+                input_data=input_data,
+                diagnosis=diagnosis
             )
             
-            state.prescription = prescription
-            state.complete()
+            # Update state (works with both dict and dataclass)
+            if isinstance(state, dict):
+                state['prescription'] = prescription
+                state['status'] = 'completed'
+                state['end_time'] = __import__('time').time()
+            else:
+                state.prescription = prescription
+                state.complete()
             
             logger.info("✓ Prescription generated")
             return state
             
         except Exception as e:
             logger.error(f"Prescription error: {e}")
-            state.fail(f"Prescription generation failed: {e}")
+            if isinstance(state, dict):
+                state['error'] = f"Prescription generation failed: {e}"
+                state['status'] = 'failed'
+                state['end_time'] = __import__('time').time()
+            else:
+                state.fail(f"Prescription generation failed: {e}")
             return state
     
     def run(self, task_type: str, input_data: dict) -> MedicalState:
