@@ -17,16 +17,22 @@ class WorkflowStatus(Enum):
 
 @dataclass
 class MedicalState:
-    """State for medical workflow."""
+    """State for medical workflow with structured assessment support."""
     task_type: str
     input_data: Dict[str, Any]
     query: str = ""
-    diagnosis: str = ""
-    prescription: Optional[Dict] = None
+    # Structured assessment from MedGemma (includes diagnosis and treatment plan)
+    structured_assessment: Optional[Dict[str, str]] = None
     status: WorkflowStatus = field(default_factory=lambda: WorkflowStatus.PENDING)
     error: str = ""
     start_time: float = field(default_factory=lambda: __import__('time').time())
     end_time: Optional[float] = None
+    # Image Analysis field
+    image_analysis: Optional[str] = None
+    image_path: Optional[str] = None
+    # Supervisor-specific fields
+    classification_confidence: str = "medium"
+    classification_reason: str = ""
     
     def complete(self):
         """Mark workflow as complete."""

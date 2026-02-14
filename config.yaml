@@ -4,22 +4,39 @@
 model:
   model_name: "google/medgemma-1.5-4b-it"
   device: "auto"  # Options: "auto", "cuda", "mps", "cpu". Auto prefers MPS on Apple Silicon.
-  torch_dtype: "float16"  
-  max_new_tokens: 256  # Fast MPS inference
+  torch_dtype: "auto"  # Auto: float32 for MPS, float16 for CUDA  
+  max_new_tokens: 512  # Reduced for Mac stability - generates faster with less memory
   trust_remote_code: true
   use_real_model: true  # Use real MedGemma model (cached locally)
   
-  # Generation Parameters — greedy decoding for fast, deterministic MPS output
+  # Generation Parameters — optimized for Mac MPS stability
   generation:
-    do_sample: false        # Greedy decoding — fast and deterministic
-    temperature: 1.0        # Not used with greedy, but set for safety
-    top_p: 1.0              # Not used with greedy, but set for safety
+    do_sample: false        # Greedy decoding — stable on MPS
+    temperature: 1.0        # Not used with greedy
+    top_p: 1.0              # Not used with greedy
+    use_cache: true         # Enable KV-cache for faster generation
 
 # LangGraph Configuration
 workflow:
   timeout: 600  # Increased for real model inference
   max_retries: 0
   safety_check_interval: 1
+
+# Supervisor Configuration
+supervisor:
+  enabled: true  # Enable automatic task classification
+  confidence_threshold: "medium"  # high, medium, low
+  default_task: "unknown"  # Fallback if classification fails
+  # Classification methods (NEW: multimodal image analysis with MedGemma)
+  use_keyword_matching: true  # Text-based keyword classification
+  use_image_analysis: true    # MedGemma multimodal image classification
+  use_llm_classification: true  # Use MedGemma for intelligent classification
+  # Image classification settings
+  image_classification:
+    enabled: true
+    min_confidence: 0.5  # Minimum confidence to accept image-based classification (lowered from 0.6)
+    max_tokens: 128      # Tokens for classification response
+    fallback_to_text: true  # Fall back to text methods if image classification fails
 
 # Safety Configuration
 safety:
@@ -76,3 +93,28 @@ logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "logs/medical_ai_evaluation.log"
+
+# API Server Configuration
+api:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8080  # Changed from 5000 to avoid AirPlay conflict on macOS
+  debug: false
+  max_file_size_mb: 16
+  upload_directory: "uploads"
+  cleanup_uploads_after_processing: true
+  
+  # Memory management
+  memory:
+    lazy_loading: true  # Load model per request, unload after
+    cleanup_after_request: true  # Free memory after each diagnosis
+    max_concurrent_requests: 1  # Sequential processing for memory efficiency
+    
+  # Rate limiting (optional)
+  rate_limit:
+    enabled: false
+    requests_per_minute: 10
+
+# Workflow Mode
+# Options: "api" (user-driven), "demo" (all test cases), "cli" (interactive)
+workflow_mode: "api"
