@@ -1,6 +1,5 @@
 """
 Medical AI Streamlit App - User-Driven Workflow
-Interactive web interface for medical diagnosis
 """
 
 import streamlit as st
@@ -9,18 +8,21 @@ import sys
 import logging
 from datetime import datetime
 
-# Setup environment
+# Setup environment for Mac optimization
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+os.environ["MALLOC_ARENA_MAX"] = "2"
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Add parent directory to path
+# Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# FIXED: Correct imports for your package structure
 from app.graph import MedicalGraph
 from app.input_preprocessor import preprocess_user_input
 from app.state import WorkflowStatus
@@ -49,40 +51,27 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-    .diagnosis-box {
-        background-color: #f0f8ff;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #1f77b4;
-        margin: 20px 0;
-    }
-    .prescription-box {
-        background-color: #f0fff0;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #2ecc71;
-        margin: 20px 0;
-    }
-    .warning-box {
-        background-color: #fff3cd;
-        padding: 15px;
-        border-radius: 5px;
-        border-left: 5px solid #ffc107;
-        margin: 10px 0;
+    .stAlert {
+        margin-top: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-
 @st.cache_resource
 def get_medical_graph():
-    """Initialize MedicalGraph with lazy loading."""
-    return MedicalGraph(preload_model=False)
-
+    """Initialize MedicalGraph with model preloading."""
+    try:
+        graph = MedicalGraph(preload_model=True)
+        return graph
+    except Exception as e:
+        logger.error(f"Failed to initialize MedicalGraph: {e}")
+        st.error(f"Failed to load model: {e}")
+        return None
 
 def process_diagnosis(text_input, image_file, metadata):
     """Process diagnosis request."""
     try:
+        # Prepare input data using preprocessor
         if image_file is not None:
             image_data = image_file.getvalue()
             image_filename = image_file.name
@@ -98,125 +87,140 @@ def process_diagnosis(text_input, image_file, metadata):
                 metadata=metadata
             )
         
+        # Get graph instance
         graph = get_medical_graph()
+        if graph is None:
+            st.error("Model not loaded. Please check your configuration.")
+            return None
         
-        with st.spinner('🧠 Analyzing with Medical AI...'):
-            state = graph.run(input_data=input_data, cleanup_after=True)
+        # Run workflow with progress updates
+        progress_text = st.empty()
+        progress_text.info("🔄 Step 1/3: Classifying image... (~2 minutes)")
+        
+        state = graph.run(input_data=input_data, cleanup_after=False)
+        
+        if state and state.status.value == "completed":
+            progress_text.success("✅ Analysis complete!")
+        elif state and state.error:
+            progress_text.error(f"❌ Error: {state.error}")
+        else:
+            progress_text.warning("⚠️ Analysis incomplete")
         
         return state
         
     except Exception as e:
-        st.error(f"❌ Error: {str(e)}")
+        logger.error(f"Error in process_diagnosis: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        st.error(f"❌ Error during analysis: {str(e)}")
         return None
-
 
 def display_results(state):
     """Display structured assessment results."""
     if not state:
+        st.error("No results generated")
         return
     
     st.markdown("---")
-    st.markdown("### 📋 Results")
+    st.markdown("### 📋 Analysis Results")
     
-    # Metrics
+    # Metrics row
     cols = st.columns(3)
     with cols[0]:
         st.metric("Classification", state.task_type.upper().replace("_", " "))
     with cols[1]:
-        status = "✅" if state.status == WorkflowStatus.COMPLETED else "❌"
-        st.metric("Status", f"{status} {state.status.value}")
+        status_icon = "✅" if state.status == WorkflowStatus.COMPLETED else "❌"
+        st.metric("Status", f"{status_icon} {state.status.value}")
     with cols[2]:
-        if state.end_time and hasattr(state, 'start_time'):
+        if state.end_time and state.start_time:
             duration = round(state.end_time - state.start_time, 2)
-            st.metric("Time", f"{duration}s")
+            st.metric("Processing Time", f"{duration}s")
+    
+    # Error display if failed
+    if state.status != WorkflowStatus.COMPLETED and state.error:
+        st.error(f"Analysis failed: {state.error}")
+        return
     
     # Structured Assessment
     if state.structured_assessment:
         st.markdown("---")
-        st.markdown("### 🩺 AI Clinical Assessment")
         st.success("✅ Medical assessment generated successfully")
         
         assessment = state.structured_assessment
         
-        # Clinical Summary
-        if assessment.get('clinical_summary'):
-            with st.expander("📋 Clinical Summary", expanded=True):
-                st.markdown(assessment['clinical_summary'])
+        # Display sections in order
+        sections = [
+            ("📋 Clinical Summary", "clinical_summary", True),
+            ("🔍 Primary Diagnosis", "primary_diagnosis", True),
+            ("📊 Differential Diagnoses", "differentials", False),
+            ("💊 Treatment Plan", "treatment_plan", True),
+            ("🌟 Lifestyle Recommendations", "lifestyle_recommendations", False),
+            ("📅 Follow-up Plan", "follow_up", True)
+        ]
         
-        # Primary Diagnosis
-        if assessment.get('primary_diagnosis'):
-            with st.expander("🔍 Primary Diagnosis", expanded=True):
-                st.markdown(assessment['primary_diagnosis'])
-        
-        # Differential Diagnoses
-        if assessment.get('differentials'):
-            with st.expander("📊 Differential Diagnoses"):
-                st.markdown(assessment['differentials'])
-        
-        # Treatment Plan
-        if assessment.get('treatment_plan'):
-            with st.expander("💊 Treatment Plan", expanded=True):
-                st.markdown(assessment['treatment_plan'])
-        
-        # Lifestyle Recommendations
-        if assessment.get('lifestyle_recommendations'):
-            with st.expander("🌟 Lifestyle Recommendations"):
-                st.markdown(assessment['lifestyle_recommendations'])
-        
-        # Follow-up Plan
-        if assessment.get('follow_up'):
-            with st.expander("📅 Follow-up Plan", expanded=True):
-                st.markdown(assessment['follow_up'])
+        for title, key, expanded in sections:
+            content = assessment.get(key, "")
+            if content and len(content.strip()) > 5:
+                with st.expander(title, expanded=expanded):
+                    st.markdown(content)
+            else:
+                with st.expander(f"{title} (Not generated)", expanded=False):
+                    st.info("This section was not generated by the model.")
+    else:
+        st.warning("⚠️ No structured assessment was generated. The model may have failed to produce output.")
     
     # Disclaimer
-    st.warning("⚠️ **Disclaimer:** This is for educational purposes only. Consult healthcare professionals for actual medical advice.")
-
+    st.markdown("---")
+    st.warning("⚠️ **Medical Disclaimer:** This AI-generated assessment is for educational purposes only. It does not constitute medical advice. Always consult qualified healthcare professionals for diagnosis and treatment decisions.")
 
 def main():
     """Main Streamlit app."""
     # Header
-    st.markdown("<h1 class='main-header'>🏥 Medical AI Diagnosis</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='sub-header'>User-Driven Medical Analysis with Automatic Classification</p>", unsafe_allow_html=True)
+    st.markdown("<h1 class='main-header'>🏥 Medical AI Diagnosis System</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='sub-header'>AI-Powered Medical Analysis with Automatic Classification</p>", unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
         st.markdown("### 📖 About")
         st.info("""
         This AI system analyzes medical inputs and classifies them into:
-        - CT Coronary Angiography
-        - Lipid Profile Analysis
-        - Breast Imaging/Mammogram
-        - Biopsy Report Analysis
+        - **CT Coronary Angiography**
+        - **Lipid Profile Analysis**  
+        - **Breast Imaging/Mammogram**
+        - **Biopsy Report Analysis**
         
-        **Memory Efficient:** Model loads per request and cleans up automatically.
+        Powered by MedGemma 1.5 4B
         """)
         
         st.markdown("### 📊 System Status")
         graph = get_medical_graph()
-        if graph._model_loaded:
-            st.success("✅ Model Loaded")
+        if graph and graph._model_loaded:
+            st.success("✅ Model Loaded & Ready")
+        elif graph:
+            st.info("⏳ Model Ready (Lazy Loading)")
         else:
-            st.info("💤 Model Ready (Lazy Loading)")
+            st.error("❌ Model Failed to Load")
         
-        st.markdown("### 💡 Tips")
+        st.markdown("### 💡 Usage Tips")
         st.markdown("""
-        - Be specific with medical terms
-        - Include lab values if available
+        - Be specific with medical terminology
+        - Include lab values when available
         - Upload clear medical images
-        - Provide patient age/sex for better analysis
+        - Provide patient demographics (age/sex)
+        - First load may take 1-2 minutes
         """)
     
     # Main input area
     st.markdown("### 📝 Enter Medical Information")
     
     # Input tabs
-    tab1, tab2 = st.tabs(["📝 Text Input", "🖼️ Image + Text"])
+    tab1, tab2 = st.tabs(["📝 Text Only", "🖼️ Image + Text"])
     
     with tab1:
         text_input = st.text_area(
             "Medical Report / Symptoms / Lab Results",
             height=200,
-            placeholder="Example: 58-year-old male with LDL 145 mg/dL, HDL 38 mg/dL. History of diabetes and hypertension...",
+            placeholder="Example: 58-year-old male with LDL 145 mg/dL, HDL 38 mg/dL. History of diabetes and hypertension. Patient reports chest pain on exertion...",
             key="text_input"
         )
         
@@ -234,29 +238,30 @@ def main():
                 if sex:
                     metadata['sex'] = sex
                 
-                state = process_diagnosis(text_input, None, metadata)
-                if state:
-                    display_results(state)
+                with st.spinner("Processing..."):
+                    state = process_diagnosis(text_input, None, metadata)
+                    if state:
+                        display_results(state)
             else:
                 st.warning("⚠️ Please enter medical text to analyze.")
     
     with tab2:
         image_file = st.file_uploader(
             "Upload Medical Image",
-            type=['png', 'jpg', 'jpeg'],
+            type=['png', 'jpg', 'jpeg', 'gif', 'bmp'],
             help="Upload CT scans, mammograms, ultrasounds, or other medical images"
         )
         
         if image_file:
-            st.image(image_file, caption="Uploaded Image", width='stretch')
+            st.image(image_file, caption="Uploaded Image Preview", use_column_width=True)
         
-        st.markdown("##### 📝 Clinical Information (Optional)")
-        st.info("💡 **Tip**: Adding patient details (age, symptoms, history) helps the AI provide more accurate analysis, but the system can analyze images alone.")
+        st.markdown("##### 📝 Clinical Information (Optional but Recommended)")
+        st.info("💡 Adding clinical context improves analysis accuracy significantly")
         
         image_text = st.text_area(
-            "Patient Information (Optional)",
+            "Patient Information",
             height=120,
-            placeholder="Example (optional):\n65-year-old male with chest pain\nHistory: Diabetes, hypertension\n\nOr leave blank for image-only analysis",
+            placeholder="Example: 65-year-old female, screening mammogram. Family history of breast cancer...",
             key="image_text"
         )
         
@@ -274,16 +279,16 @@ def main():
                 if sex_img:
                     metadata['sex'] = sex_img
                 
-                state = process_diagnosis(image_text if image_text else None, image_file, metadata)
-                if state:
-                    display_results(state)
+                with st.spinner("Processing image... This may take up to 60 seconds on first run"):
+                    state = process_diagnosis(image_text if image_text else None, image_file, metadata)
+                    if state:
+                        display_results(state)
             else:
                 st.warning("⚠️ Please upload an image to analyze.")
     
     # Footer
     st.markdown("---")
-    st.markdown("<p style='text-align: center; color: #666;'>Medical AI System v1.0 | User-Driven Workflow</p>", unsafe_allow_html=True)
-
+    st.markdown("<p style='text-align: center; color: #666;'>Medical AI System v1.0 | Powered by MedGemma</p>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()

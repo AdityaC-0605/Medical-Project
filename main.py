@@ -25,10 +25,12 @@ import os
 import sys
 import logging
 
-# Setup environment
+# Setup environment for Mac optimization
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"  # Enable MPS fallback for unsupported ops
+os.environ["MALLOC_ARENA_MAX"] = "2"  # Limit memory arenas
 
 # Configure logging
 logging.basicConfig(
