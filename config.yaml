@@ -23,7 +23,7 @@ model:
   image_processing:
     enabled: true                      # Enable image + text processing
     image_token: "<<start_of_image>>"  # Gemma3 processor expects this token
-    max_image_size: 512                # Resize large images for faster processing
+    max_image_size: 384                # Smaller images for faster processing
     require_token_in_prompt: true      # CRITICAL: Ensures image token is added
 
 

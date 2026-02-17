@@ -37,17 +37,15 @@ class MedicalImageClassifier:
             # Build prompt - image token will be added by medgemma_client
             context = f"\nClinical context: {text_context}" if text_context else ""
             
-            prompt = f"""You are an expert radiologist. Examine this medical image carefully and classify it into exactly ONE category.
+            prompt = f"""Classify this medical image into ONE category:
+- CT_CORONARY: Cardiac CT angiography
+- BREAST_IMAGING: Mammogram or breast imaging  
+- CHEST_XRAY: Chest X-ray
+- BRAIN_MRI: Brain scan
+- ABDOMINAL_CT: Abdominal CT
+- UNKNOWN
 
-Category definitions:
-- CT_CORONARY: Cardiac CT angiography showing coronary arteries, heart chambers, calcium scoring (NOT a chest X-ray)
-- BREAST_IMAGING: Mammogram or breast ultrasound showing breast tissue  
-- CHEST_XRAY: Plain X-ray of chest showing lungs, ribs, heart silhouette (2D projection, NOT CT)
-- BRAIN_MRI: Brain MRI or CT showing cranial structures
-- ABDOMINAL_CT: CT scan of abdomen showing organs like liver, kidneys, intestines
-- UNKNOWN: Cannot determine from the image
-
-You MUST respond with ONLY the exact category name (one word with underscore).
+Reply with ONLY the category name.
 
 Category:"""
             

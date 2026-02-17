@@ -234,7 +234,7 @@ class MedicalGraph:
             structured_assessment = self.medgemma.generate_structured_assessment(
                 task_type=task_type,
                 input_data=input_data,
-                max_new_tokens=64  # Minimal tokens for basic assessment
+                max_new_tokens=128  # Enough for all 4 sections
             )
             
             state.structured_assessment = structured_assessment
@@ -272,6 +272,7 @@ class MedicalGraph:
                 input_data=input_data
             )
             
+            # Run complete workflow
             result = self.graph.invoke(state)
             
             if isinstance(result, dict):

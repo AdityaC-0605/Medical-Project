@@ -156,7 +156,7 @@ class MedGemmaClient:
             logger.error(traceback.format_exc())
             return ""
     
-    def _load_images(self, image_path: str, max_size: int = 512) -> List[Image.Image]:
+    def _load_images(self, image_path: str, max_size: int = 384) -> List[Image.Image]:
         """Load and preprocess image."""
         image = Image.open(image_path).convert("RGB")
         
@@ -199,8 +199,7 @@ class MedGemmaClient:
             image_path = input_data.get("image_path")
             has_image = image_path and os.path.exists(image_path)
             
-            logger.info(f"🧠 MedGemma analyzing {task_type}")
-            logger.info(f"📸 Image: {has_image}")
+            logger.info(f"🧠 Analyzing {task_type}...")
             
             if has_image:
                 images = self._load_images(image_path)
@@ -208,8 +207,6 @@ class MedGemmaClient:
                 # Add image token
                 if not prompt.startswith(self.image_token):
                     prompt = f"{self.image_token}\n{prompt}"
-                
-                logger.info(f"   Prompt: {prompt[:60]}...")
                 
                 inputs = self.processor(
                     text=prompt,
@@ -224,13 +221,11 @@ class MedGemmaClient:
             
             inputs = self._move_to_device(inputs)
             
-            logger.info(f"🚀 Generating assessment (max_tokens={max_new_tokens})...")
-            
-            # Build generation kwargs - optimized for faster generation
+            # Fast generation with minimal overhead
             gen_kwargs = {
                 **inputs,
                 "max_new_tokens": max_new_tokens,
-                "do_sample": False,  # Greedy decoding for faster, consistent results
+                "do_sample": False,
                 "pad_token_id": self.processor.tokenizer.pad_token_id,
                 "eos_token_id": self.processor.tokenizer.eos_token_id,
                 "use_cache": True,
@@ -240,31 +235,29 @@ class MedGemmaClient:
                 output_ids = self.model.generate(**gen_kwargs)
             
             generated_text = self._decode_output(inputs, output_ids)
-            self._clear_cache()
             
-            logger.info(f"✅ Generated {len(generated_text)} chars")
+            logger.info(f"✓ Generated {len(generated_text)} chars")
             
             if generated_text and len(generated_text) > 30:
-                parsed = self._parse_structured_output(generated_text)
-                # Log what we got for debugging
-                logger.info(f"✓ Generated {len(generated_text)} chars")
-                logger.info(f"✓ Parsed diagnosis: '{parsed.get('primary_diagnosis', 'EMPTY')[:50]}...'")
+                # Log the actual content for debugging
+                logger.info(f"✓ Raw output ({len(generated_text)} chars): {generated_text[:200]}...")
                 
-                # Accept if we have any diagnosis content
-                if parsed.get("primary_diagnosis") and len(parsed["primary_diagnosis"].strip()) > 5:
+                parsed = self._parse_structured_output(generated_text)
+                logger.info(f"✓ Parsed sections: {[k for k, v in parsed.items() if v][:3]}")
+                
+                # Accept if we have any content in clinical_summary or primary_diagnosis
+                has_content = (
+                    (parsed.get("clinical_summary") and len(parsed["clinical_summary"].strip()) > 10) or
+                    (parsed.get("primary_diagnosis") and len(parsed["primary_diagnosis"].strip()) > 5)
+                )
+                
+                if has_content:
                     logger.info(f"✓ Using parsed assessment")
                     return parsed
                 else:
-                    # If parsing failed but we have content, use the raw text as summary
-                    logger.info(f"✓ Using raw text as fallback")
-                    return {
-                        "clinical_summary": generated_text[:500],
-                        "primary_diagnosis": "See clinical summary above",
-                        "differentials": "",
-                        "treatment_plan": "",
-                        "lifestyle_recommendations": "",
-                        "follow_up": "Consult specialist for detailed evaluation"
-                    }
+                    # If parsing failed but we have content, split text intelligently
+                    logger.info(f"✓ Using intelligent text split")
+                    return self._intelligent_text_split(generated_text)
             
             logger.warning(f"⚠️ Output too short ({len(generated_text)} chars), using fallback")
             return self._generate_fallback_response(task_type, input_data)
@@ -310,11 +303,14 @@ class MedGemmaClient:
         
         prompt = f"""You are an expert {role}. Analyze this {task}.
 
-Provide brief assessment:
-CLINICAL SUMMARY: [brief summary]
-PRIMARY DIAGNOSIS: [main finding]
-TREATMENT: [recommendations]
-FOLLOW-UP: [next steps]"""
+Provide a brief assessment with these sections:
+
+CLINICAL SUMMARY: What is seen in the image
+PRIMARY DIAGNOSIS: Main medical finding
+TREATMENT PLAN: Medical treatment recommendations  
+FOLLOW-UP PLAN: Next steps and monitoring
+
+Write 1-2 sentences for each section. Be specific and clinical."""
         
         return prompt
     
@@ -333,12 +329,12 @@ FOLLOW-UP: [next steps]"""
             return result
         
         sections = {
-            "clinical_summary": ["CLINICAL SUMMARY:", "Clinical Summary:", "SUMMARY:"],
-            "primary_diagnosis": ["PRIMARY DIAGNOSIS:", "Primary Diagnosis:", "DIAGNOSIS:"],
-            "differentials": ["DIFFERENTIAL DIAGNOSES:", "Differential Diagnoses:", "DIFFERENTIALS:"],
-            "treatment_plan": ["TREATMENT PLAN:", "Treatment Plan:", "TREATMENT:"],
-            "lifestyle_recommendations": ["LIFESTYLE RECOMMENDATIONS:", "Lifestyle Recommendations:", "LIFESTYLE:"],
-            "follow_up": ["FOLLOW-UP PLAN:", "Follow-up Plan:", "FOLLOW UP:", "FOLLOWUP:"]
+            "clinical_summary": ["SUMMARY:", "CLINICAL SUMMARY:", "ASSESSMENT:"],
+            "primary_diagnosis": ["DIAGNOSIS:", "PRIMARY DIAGNOSIS:", "FINDINGS:"],
+            "differentials": ["DIFFERENTIALS:", "DIFFERENTIAL DIAGNOSES:"],
+            "treatment_plan": ["TREATMENT:", "TREATMENT PLAN:", "RECOMMENDATIONS:"],
+            "lifestyle_recommendations": ["LIFESTYLE:"],
+            "follow_up": ["FOLLOWUP:", "FOLLOW-UP:", "FOLLOW UP:", "NEXT STEPS:"]
         }
         
         text_upper = text.upper()
@@ -352,8 +348,9 @@ FOLLOW-UP: [next steps]"""
                     break
         
         if not positions:
-            result["clinical_summary"] = text
-            return result
+            # No headers found, use intelligent split
+            logger.info("  No section headers found, using intelligent split")
+            return self._intelligent_text_split(text)
         
         sorted_sections = sorted(positions.items(), key=lambda x: x[1][0])
         
@@ -364,7 +361,13 @@ FOLLOW-UP: [next steps]"""
             else:
                 content = text[end:]
             
+            # Clean up the content
             content = re.sub(r'^[:\s]+', '', content).strip()
+            
+            # Remove repetitive headers
+            content = re.sub(r'\b(SUMMARY|DIAGNOSIS|TREATMENT|FOLLOWUP|IMPRESSION|FINDINGS):\s*', '', content, flags=re.IGNORECASE)
+            content = re.sub(r'\s+', ' ', content).strip()
+            
             result[key] = content
         
         return result
@@ -379,6 +382,72 @@ FOLLOW-UP: [next steps]"""
             "lifestyle_recommendations": "Healthy lifestyle",
             "follow_up": "Schedule with provider"
         }
+    
+    def _intelligent_text_split(self, text: str) -> Dict[str, str]:
+        """Intelligently split text into sections when parser fails."""
+        # Clean up the text
+        text = text.strip()
+        
+        result = {
+            "clinical_summary": "",
+            "primary_diagnosis": "",
+            "differentials": "",
+            "treatment_plan": "",
+            "lifestyle_recommendations": "",
+            "follow_up": ""
+        }
+        
+        if not text:
+            result["clinical_summary"] = "No assessment generated"
+            return result
+        
+        # Split by newlines first to preserve structure
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        
+        if len(lines) <= 2:
+            # Short text - split into sentences
+            sentences = [s.strip() for s in text.split('. ') if s.strip()]
+            
+            if len(sentences) >= 4:
+                # Distribute across sections
+                result["clinical_summary"] = sentences[0] + "."
+                result["primary_diagnosis"] = sentences[1] + "."
+                result["treatment_plan"] = ". ".join(sentences[2:-1]) + "."
+                result["follow_up"] = sentences[-1] + "."
+            elif len(sentences) >= 2:
+                result["clinical_summary"] = sentences[0] + "."
+                result["primary_diagnosis"] = ". ".join(sentences[1:])
+            else:
+                result["clinical_summary"] = text
+        else:
+            # Multi-line text - use first part as summary, distribute rest
+            result["clinical_summary"] = lines[0]
+            
+            # Look for specific patterns in remaining lines
+            remaining_text = " ".join(lines[1:])
+            
+            # Try to identify diagnosis (often contains anatomical terms or findings)
+            if any(term in remaining_text.lower() for term in ['artery', 'vessel', 'mass', 'lesion', 'calcification', 'stenosis', 'occlusion']):
+                # Split remaining into roughly equal parts
+                parts = remaining_text.split('. ')
+                mid = len(parts) // 3
+                
+                if len(parts) >= 3:
+                    result["primary_diagnosis"] = ". ".join(parts[:mid]) + "."
+                    result["treatment_plan"] = ". ".join(parts[mid:2*mid]) + "."
+                    result["follow_up"] = ". ".join(parts[2*mid:]) + "."
+                else:
+                    result["primary_diagnosis"] = remaining_text
+            else:
+                result["primary_diagnosis"] = remaining_text[:300]
+        
+        # Ensure no section is empty
+        if not result["treatment_plan"]:
+            result["treatment_plan"] = "Consult specialist for treatment recommendations"
+        if not result["follow_up"]:
+            result["follow_up"] = "Schedule follow-up with healthcare provider"
+        
+        return result
     
     def cleanup(self):
         """Cleanup."""
