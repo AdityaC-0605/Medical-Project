@@ -35,17 +35,19 @@ class MedicalImageClassifier:
                     return "unknown", 0.0, "Model load failed"
             
             # Build prompt - image token will be added by medgemma_client
-            context = f"\nClinical context: {text_context}" if text_context else ""
+            context = f"\nContext: {text_context[:100]}" if text_context else ""
             
-            prompt = f"""Classify this medical image into ONE category:
-- CT_CORONARY: Cardiac CT angiography
-- BREAST_IMAGING: Mammogram or breast imaging  
-- CHEST_XRAY: Chest X-ray
-- BRAIN_MRI: Brain scan
-- ABDOMINAL_CT: Abdominal CT
-- UNKNOWN
+            # Optimized classifier prompt for better accuracy
+            prompt = f"""Analyze this medical image and classify it into exactly ONE category:
 
-Reply with ONLY the category name.
+CT_CORONARY - Heart/coronary arteries scan
+BREAST_IMAGING - Breast/mammogram imaging  
+CHEST_XRAY - Chest/lungs X-ray
+BRAIN_MRI - Brain scan
+ABDOMINAL_CT - Abdomen scan
+UNKNOWN - Cannot determine
+
+Reply with ONLY the category name (one word, no explanation).{context}
 
 Category:"""
             

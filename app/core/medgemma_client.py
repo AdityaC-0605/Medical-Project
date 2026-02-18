@@ -229,6 +229,8 @@ class MedGemmaClient:
                 "pad_token_id": self.processor.tokenizer.pad_token_id,
                 "eos_token_id": self.processor.tokenizer.eos_token_id,
                 "use_cache": True,
+                "num_beams": 1,
+                "early_stopping": True,
             }
             
             with torch.no_grad():
@@ -289,8 +291,9 @@ class MedGemmaClient:
             return ""
     
     def _build_structured_prompt(self, task_type: str, input_data: Dict[str, Any]) -> str:
-        """Build medical prompt."""
+        """Build optimized medical prompt for better quality without increasing time."""
         text_content = input_data.get("text_content", "")
+        has_text = bool(text_content and len(text_content.strip()) > 10)
         
         experts = {
             "ct_coronary": ("cardiologist", "cardiac CT", "coronary arteries"),
@@ -301,16 +304,23 @@ class MedGemmaClient:
         
         role, task, focus = experts.get(task_type, ("expert", "case", "findings"))
         
-        prompt = f"""You are an expert {role}. Analyze this {task}.
+        # Context section only if text is provided
+        context_section = f"\nAdditional clinical context: {text_content[:200]}" if has_text else ""
+        
+        # Optimized prompt with clear formatting instructions for better parsing
+        prompt = f"""You are an expert {role}. Analyze this {task}.{context_section}
 
-Provide a brief assessment with these sections:
+Provide a structured medical assessment with these exact sections:
 
-CLINICAL SUMMARY: What is seen in the image
-PRIMARY DIAGNOSIS: Main medical finding
-TREATMENT PLAN: Medical treatment recommendations  
-FOLLOW-UP PLAN: Next steps and monitoring
+CLINICAL SUMMARY: Describe the key imaging findings and anatomical observations in 2 sentences. Focus on specific abnormalities.
 
-Write 1-2 sentences for each section. Be specific and clinical."""
+PRIMARY DIAGNOSIS: State the main diagnosis clearly in 1 sentence. Include severity or extent if evident.
+
+TREATMENT PLAN: List specific interventions, medications, or procedures in 1-2 sentences.
+
+FOLLOW-UP PLAN: Specify timing and type of follow-up care in 1 sentence.
+
+Important: Use plain text only. Do not use markdown formatting, asterisks, or bullet points. Be specific and clinical."""
         
         return prompt
     
@@ -364,8 +374,10 @@ Write 1-2 sentences for each section. Be specific and clinical."""
             # Clean up the content
             content = re.sub(r'^[:\s]+', '', content).strip()
             
-            # Remove repetitive headers
+            # Remove markdown artifacts and formatting
+            content = re.sub(r'\*+', '', content)  # Remove asterisks
             content = re.sub(r'\b(SUMMARY|DIAGNOSIS|TREATMENT|FOLLOWUP|IMPRESSION|FINDINGS):\s*', '', content, flags=re.IGNORECASE)
+            content = re.sub(r'^[-•]\s*', '', content, flags=re.MULTILINE)  # Remove bullet points
             content = re.sub(r'\s+', ' ', content).strip()
             
             result[key] = content

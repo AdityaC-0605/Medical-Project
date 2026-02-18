@@ -94,7 +94,7 @@ def process_diagnosis(text_input, image_file, metadata):
         
         # Run workflow with progress updates
         progress_text = st.empty()
-        progress_text.info("🔄 Analyzing... (~4-5 minutes)")
+        progress_text.info("🔄 Analyzing... (~8-10 minutes)")
         
         state = graph.run(input_data=input_data, cleanup_after=False)
         
