@@ -5,7 +5,7 @@ model:
   model_name: "google/medgemma-1.5-4b-it"
   device: "auto"  # Options: "auto", "cuda", "mps", "cpu". Auto prefers MPS on Apple Silicon.
   torch_dtype: "auto"  # Auto: float32 for MPS, float16 for CUDA  
-  max_new_tokens: 400  # Reduced for 20% faster generation while maintaining quality
+  max_new_tokens: 256  # Slightly increased for more detailed summaries
   trust_remote_code: true
   use_real_model: true  # Use real MedGemma model (cached locally)
   

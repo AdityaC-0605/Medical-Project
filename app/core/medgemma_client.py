@@ -296,29 +296,28 @@ class MedGemmaClient:
         has_text = bool(text_content and len(text_content.strip()) > 10)
         
         experts = {
-            "ct_coronary": ("cardiologist", "cardiac CT", "coronary arteries"),
-            "breast_imaging": ("radiologist", "breast imaging", "masses, calcifications"),
-            "lipid_profile": ("cardiologist", "lipid panel", "cholesterol levels"),
-            "biopsy_report": ("pathologist", "biopsy", "histology")
+            "ct_coronary": ("cardiologist", "cardiac CT", "coronary arteries, stenosis severity, plaque type"),
+            "breast_imaging": ("radiologist", "breast imaging", "masses, calcifications, BI-RADS category"),
+            "lipid_profile": ("cardiologist", "lipid panel", "cholesterol levels, cardiovascular risk"),
+            "biopsy_report": ("pathologist", "biopsy", "histological type, grade, margins")
         }
         
         role, task, focus = experts.get(task_type, ("expert", "case", "findings"))
         
         # Context section only if text is provided
-        context_section = f"\nAdditional clinical context: {text_content[:200]}" if has_text else ""
+        context_section = f"\nAdditional clinical context: {text_content[:300]}" if has_text else ""
         
-        # Optimized prompt with clear formatting instructions for better parsing
         prompt = f"""You are an expert {role}. Analyze this {task}.{context_section}
 
 Provide a structured medical assessment with these exact sections:
 
-CLINICAL SUMMARY: Describe the key imaging findings and anatomical observations in 2 sentences. Focus on specific abnormalities.
+CLINICAL SUMMARY: Describe the key findings and observations in 3-4 sentences. Include specific abnormalities, their location, severity, and clinical significance. Mention relevant measurements or grades (e.g. {focus}).
 
-PRIMARY DIAGNOSIS: State the main diagnosis clearly in 1 sentence. Include severity or extent if evident.
+PRIMARY DIAGNOSIS: State the main diagnosis in 2 sentences. Include severity, extent, and risk category if applicable.
 
-TREATMENT PLAN: List specific interventions, medications, or procedures in 1-2 sentences.
+TREATMENT PLAN: List specific interventions, medications, or procedures in 2-3 sentences. Include drug names or procedure types where relevant.
 
-FOLLOW-UP PLAN: Specify timing and type of follow-up care in 1 sentence.
+FOLLOW-UP PLAN: Specify timing and type of follow-up care in 1-2 sentences.
 
 Important: Use plain text only. Do not use markdown formatting, asterisks, or bullet points. Be specific and clinical."""
         
@@ -341,10 +340,10 @@ Important: Use plain text only. Do not use markdown formatting, asterisks, or bu
         sections = {
             "clinical_summary": ["SUMMARY:", "CLINICAL SUMMARY:", "ASSESSMENT:"],
             "primary_diagnosis": ["DIAGNOSIS:", "PRIMARY DIAGNOSIS:", "FINDINGS:"],
-            "differentials": ["DIFFERENTIALS:", "DIFFERENTIAL DIAGNOSES:"],
+            "differentials": ["DIFFERENTIALS:", "DIFFERENTIAL DIAGNOSES:", "DIFFERENTIAL DIAGNOSIS:"],
             "treatment_plan": ["TREATMENT:", "TREATMENT PLAN:", "RECOMMENDATIONS:"],
-            "lifestyle_recommendations": ["LIFESTYLE:"],
-            "follow_up": ["FOLLOWUP:", "FOLLOW-UP:", "FOLLOW UP:", "NEXT STEPS:"]
+            "lifestyle_recommendations": ["LIFESTYLE:", "LIFESTYLE RECOMMENDATIONS:", "LIFESTYLE CHANGES:"],
+            "follow_up": ["FOLLOWUP:", "FOLLOW-UP:", "FOLLOW UP:", "NEXT STEPS:", "FOLLOW-UP PLAN:"]
         }
         
         text_upper = text.upper()
