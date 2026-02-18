@@ -302,37 +302,6 @@ export PYTORCH_ENABLE_MPS_FALLBACK=1
 export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
 ```
 
-## 📝 Changelog
-
-### February 17, 2026 — Performance Optimization
-- Reduced `max_new_tokens` from 512 → 400 (20% faster generation)
-- Optimized diagnose node to use 128 tokens for structured sections
-- Improved prompt engineering for better quality with fewer tokens
-- Overall target: **5–8 minutes** per assessment (down from 10+ minutes)
-
-### February 13, 2026 — Diagnosis Consistency Fix
-- Fixed issue where the system generated identical diagnoses for different medical images
-- Improved input-specific prompt construction for distinct, accurate outputs
-
-### February 10–12, 2026 — MPS Stability & Cleanup
-- Fixed MedGemma loading on Apple Silicon (MPS) — resolved segfaults
-- Implemented CPU-first model loading, then move to MPS
-- Switched to `float32` for MPS stability, `float16` for CUDA
-- Greedy decoding (`do_sample: false`) for deterministic, stable MPS output
-- Removed unused files and legacy `prescription_generator.py`
-
-### February 9, 2026 — Architecture Overhaul
-- Added **MedGemma-powered image classifier** (`image_classifier.py`)
-- Replaced keyword-based classification with AI-driven classification
-- Integrated structured assessment output (Clinical Summary, Diagnosis, Treatment, Follow-Up)
-- Added intelligent text splitting as fallback when section parsing fails
-- Implemented model preloading for better first-request performance
-
-### February 7, 2026 — MedGemma Integration
-- Integrated MedGemma-1.5-4b-it for both text and multimodal tasks
-- Fixed text-only and multimodal generation pipelines
-- Added image token handling for Gemma3 processor compatibility
-
 ## ⚠️ Medical Disclaimer
 
 **IMPORTANT**: This system is for **educational and research purposes only**.
@@ -342,18 +311,6 @@ export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
 - ✅ **Always consult qualified healthcare professionals**
 - ✅ **Verify all AI-generated recommendations**
 
-## 🤝 Contributing
-
-This is an educational project demonstrating AI in healthcare. Contributions welcome for:
-- Additional medical task types
-- Improved prompts and clinical queries
-- UI/UX enhancements
-- Documentation improvements
-
-## 📚 Documentation
-
-- `WORKFLOW_ARCHITECTURE.md` - Detailed explanation of the system's workflow and routing logic.
-
 ## 🙏 Acknowledgments
 
 - **Google** for the MedGemma model
@@ -361,7 +318,3 @@ This is an educational project demonstrating AI in healthcare. Contributions wel
 - **HuggingFace** for model hosting and the Transformers library
 
 ---
-
-**Built with ❤️ for advancing medical AI education**
-
-*Last Updated: February 17, 2026*
