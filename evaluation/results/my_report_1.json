@@ -1,0 +1,50 @@
+{
+  "generated_at": "2026-02-19T22:03:09.047320",
+  "dataset": "/Users/aditya/Documents/Medical-Project/evaluation/eval_cases.jsonl",
+  "output": "/Users/aditya/Documents/Medical-Project/evaluation/results/my_report_1.json",
+  "aggregate": {
+    "faithfulness": 0.16666666666666666,
+    "answer_relevancy": 0.8341909885326139,
+    "context_precision": 0.999999999925,
+    "context_recall": 0.5,
+    "answer_correctness": 0.3035478552287539
+  },
+  "num_cases": 2,
+  "metrics": [
+    "faithfulness",
+    "answer_relevancy",
+    "context_precision",
+    "context_recall",
+    "answer_correctness"
+  ],
+  "per_case": [
+    {
+      "question": "58-year-old male with LDL 145 mg/dL, HDL 38 mg/dL, triglycerides 220 mg/dL, hypertension and diabetes.",
+      "answer": "clinical_summary: Assessment for lipid_profile.\nprimary_diagnosis: Error in analysis. Consult specialist.\ntreatment_plan: Specialist referral recommended\nfollow_up: Schedule with provider",
+      "contexts": [
+        "In high-risk patients, intensive LDL lowering and risk factor management reduce cardiovascular events.",
+        "Lifestyle intervention with diet, exercise, and diabetes control should be combined with statin therapy."
+      ],
+      "ground_truth": "High cardiovascular risk dyslipidemia requiring intensive statin-based lipid lowering, risk factor optimization, and close follow-up.",
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.8277230832143742,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.3975620189614822
+    },
+    {
+      "question": "Cardiac CT shows severe calcified plaque in left main coronary artery with greater than 70% stenosis and moderate plaque in RCA.",
+      "answer": "clinical_summary: Assessment for ct_coronary.\nprimary_diagnosis: Error in analysis. Consult specialist.\ntreatment_plan: Specialist referral recommended\nfollow_up: Schedule with provider",
+      "contexts": [
+        "Left main coronary artery severe stenosis represents high-risk coronary artery disease and usually warrants urgent specialist evaluation for revascularization decisions.",
+        "Secondary prevention includes antiplatelet strategy, high-intensity statin, blood pressure and glycemic control, and structured follow-up."
+      ],
+      "ground_truth": "Severe high-risk multivessel coronary artery disease with urgent cardiology referral for angiography/revascularization planning and optimized medical therapy.",
+      "faithfulness": 0.3333333333333333,
+      "answer_relevancy": 0.8406588938508536,
+      "context_precision": 0.9999999999,
+      "context_recall": 0.0,
+      "answer_correctness": 0.20953369149602555
+    }
+  ]
+}

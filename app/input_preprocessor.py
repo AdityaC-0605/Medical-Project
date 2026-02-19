@@ -81,8 +81,13 @@ class InputPreprocessor:
             }
         )
     
-    def process_image_upload(self, file_data: bytes, filename: str, 
-                            accompanying_text: Optional[str] = None) -> ProcessedInput:
+    def process_image_upload(
+        self,
+        file_data: bytes,
+        filename: str,
+        accompanying_text: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> ProcessedInput:
         """
         Process uploaded image file.
         
@@ -90,6 +95,7 @@ class InputPreprocessor:
             file_data: Binary image data
             filename: Original filename
             accompanying_text: Optional text description
+            metadata: Optional metadata to retain (age, sex, etc.)
         
         Returns:
             ProcessedInput with saved image path
@@ -121,6 +127,7 @@ class InputPreprocessor:
             text_content=self._clean_text(accompanying_text) if accompanying_text else None,
             original_filename=filename,
             metadata={
+                **(metadata or {}),
                 'file_size': len(file_data),
                 'inferred_type': image_type,
                 'has_text': accompanying_text is not None
@@ -376,7 +383,8 @@ def preprocess_user_input(text: Optional[str] = None,
         processed = preprocessor.process_image_upload(
             file_data=image_data,
             filename=image_filename,
-            accompanying_text=text
+            accompanying_text=text,
+            metadata=metadata
         )
     elif text:
         processed = preprocessor.process_text_input(text, metadata)

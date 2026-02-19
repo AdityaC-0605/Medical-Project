@@ -18,6 +18,16 @@ from app.state import WorkflowStatus
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
+_CLI_GRAPH = None
+
+
+def get_cli_graph():
+    """Reuse one graph/model instance per CLI process."""
+    global _CLI_GRAPH
+    if _CLI_GRAPH is None:
+        _CLI_GRAPH = MedicalGraph(preload_model=True)
+    return _CLI_GRAPH
+
 
 def print_banner():
     """Print welcome banner."""
@@ -37,28 +47,29 @@ def print_result(state):
     print(f"Status: {state.status}")
     
     if state.status == WorkflowStatus.COMPLETED:
+        assessment = getattr(state, "structured_assessment", None) or {}
+        legacy_diagnosis = getattr(state, "diagnosis", "")
+        legacy_prescription = getattr(state, "prescription", None) or {}
+
         print("\n" + "-"*70)
-        print("🩺 DIAGNOSIS:")
+        print("🩺 PRIMARY DIAGNOSIS:")
         print("-"*70)
-        print(state.diagnosis)
+        diagnosis_text = assessment.get("primary_diagnosis") or legacy_diagnosis or "No diagnosis generated"
+        print(diagnosis_text)
         
-        if state.prescription:
+        treatment_plan = assessment.get("treatment_plan", "")
+        follow_up = assessment.get("follow_up", "")
+
+        if treatment_plan or follow_up or legacy_prescription:
             print("\n" + "-"*70)
             print("💊 RECOMMENDATIONS:")
             print("-"*70)
-            
-            if 'medications' in state.prescription:
-                print("\nMedications:")
-                for med in state.prescription['medications']:
-                    print(f"  • {med}")
-            
-            if 'lifestyle_changes' in state.prescription:
-                print("\nLifestyle Changes:")
-                for change in state.prescription['lifestyle_changes']:
-                    print(f"  • {change}")
-            
-            if 'follow_up' in state.prescription:
-                print(f"\nFollow-up: {state.prescription['follow_up']}")
+            if treatment_plan:
+                print(f"\nTreatment Plan: {treatment_plan}")
+            if follow_up:
+                print(f"\nFollow-up: {follow_up}")
+            elif 'follow_up' in legacy_prescription:
+                print(f"\nFollow-up: {legacy_prescription['follow_up']}")
     else:
         print(f"\n❌ Error: {state.error}")
     
@@ -76,8 +87,8 @@ def run_text_case(text: str, metadata: dict = None):
     print(f"   Preprocessing complete")
     
     # Run workflow
-    graph = MedicalGraph(preload_model=False)
-    state = graph.run(input_data=input_data, cleanup_after=True)
+    graph = get_cli_graph()
+    state = graph.run(input_data=input_data, cleanup_after=False)
     
     print_result(state)
     return state
@@ -99,16 +110,16 @@ def run_image_case(image_path: str, text: str = None):
     
     # Preprocess
     input_data = preprocess_user_input(
+        text=text,
         image_data=image_data,
         image_filename=os.path.basename(image_path),
-        metadata={'accompanying_text': text} if text else None
     )
     
     print(f"   Preprocessing complete")
     
     # Run workflow
-    graph = MedicalGraph(preload_model=False)
-    state = graph.run(input_data=input_data, cleanup_after=True)
+    graph = get_cli_graph()
+    state = graph.run(input_data=input_data, cleanup_after=False)
     
     print_result(state)
     return state

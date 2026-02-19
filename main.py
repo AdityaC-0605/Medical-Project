@@ -54,8 +54,15 @@ def run_streamlit():
     import sys
     
     # Use port 8501 (Streamlit default) instead of 5000
-    cmd = [sys.executable, "-m", "streamlit", "run", "app.py", "--server.port=8501"]
-    subprocess.run(cmd)
+    cmd = [
+        sys.executable, "-m", "streamlit", "run", "app.py",
+        "--server.port=8501",
+        "--logger.level=info",
+    ]
+    try:
+        subprocess.run(cmd, check=False)
+    except KeyboardInterrupt:
+        print("\nStreamlit server stopped by user.")
 
 def run_api_server(host='0.0.0.0', port=8080, debug=False):
     """Run the Flask API server on port 8080 to avoid AirPlay conflict."""
@@ -102,6 +109,45 @@ def run_demo():
     demo_supervisor.demo_supervisor_classification()
     demo_supervisor.demo_manual_task_specification()
 
+def run_eval(dataset_path: str, output_path: str = "", generate_answers: bool = False,
+             dry_run: bool = False, max_cases: int = 0, generated_output: str = "",
+             generation_timeout_sec: int = 600, generate_only: bool = False,
+             score_only: bool = False, eval_max_new_tokens: int = 128):
+    """Run RAGAS evaluation workflow."""
+    import subprocess
+    import sys
+
+    print("\n" + "="*70)
+    print("RAGAS EVALUATION")
+    print("="*70)
+    print(f"Dataset: {dataset_path}")
+    print(f"Generate answers: {generate_answers}")
+    if output_path:
+        print(f"Output: {output_path}")
+    print("="*70 + "\n")
+
+    cmd = [sys.executable, "evaluation/run_ragas.py", "--dataset", dataset_path]
+    if output_path:
+        cmd.extend(["--output", output_path])
+    if generate_answers:
+        cmd.append("--generate-answers")
+    if generate_only:
+        cmd.append("--generate-only")
+    if score_only:
+        cmd.append("--score-only")
+    if dry_run:
+        cmd.append("--dry-run")
+    if max_cases > 0:
+        cmd.extend(["--max-cases", str(max_cases)])
+    if generated_output:
+        cmd.extend(["--generated-output", generated_output])
+    if generation_timeout_sec >= 0:
+        cmd.extend(["--generation-timeout-sec", str(generation_timeout_sec)])
+    if eval_max_new_tokens > 0:
+        cmd.extend(["--eval-max-new-tokens", str(eval_max_new_tokens)])
+
+    subprocess.run(cmd, check=False)
+
 
 def print_help():
     """Print help information."""
@@ -128,6 +174,9 @@ def print_help():
 ║                                                                       ║
 ║  demo      - Run old demo (all 4 test cases)                          ║
 ║              Usage: python main.py --mode demo                        ║
+║                                                                       ║
+║  eval      - Run RAGAS evaluation metrics                              ║
+║              Usage: python main.py --mode eval --generate-answers      ║
 ║                                                                       ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║                                                                       ║
@@ -184,12 +233,15 @@ Examples:
   
   # Run old demo
   python main.py --mode demo
+  
+  # Run RAGAS eval
+  python main.py --mode eval --generate-answers
         """
     )
     
     parser.add_argument(
         '--mode', '-m',
-        choices=['streamlit', 'api', 'cli', 'test', 'multimodal', 'demo', 'help'],
+        choices=['streamlit', 'api', 'cli', 'test', 'multimodal', 'demo', 'eval', 'help'],
         default='help',
         help='Operation mode (default: help)'
     )
@@ -198,6 +250,16 @@ Examples:
     parser.add_argument('--host', default='0.0.0.0', help='API server host')
     parser.add_argument('--port', type=int, default=8080, help='API server port (default: 8080 to avoid AirPlay)')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    parser.add_argument('--eval-dataset', default='evaluation/eval_cases.jsonl', help='Path to eval JSONL dataset')
+    parser.add_argument('--eval-output', default='', help='Path to save eval report JSON')
+    parser.add_argument('--generate-answers', action='store_true', help='Generate answers with MedicalGraph before scoring')
+    parser.add_argument('--dry-run', action='store_true', help='Validate eval dataset without running RAGAS')
+    parser.add_argument('--max-cases', type=int, default=0, help='Limit eval to first N cases (0 = all)')
+    parser.add_argument('--generated-output', default='', help='Path to save generated answers JSONL before scoring')
+    parser.add_argument('--generation-timeout-sec', type=int, default=600, help='Per-case timeout for eval generation (seconds)')
+    parser.add_argument('--generate-only', action='store_true', help='Generate eval answers only (no RAGAS scoring)')
+    parser.add_argument('--score-only', action='store_true', help='Run RAGAS scoring only using existing answers in dataset')
+    parser.add_argument('--eval-max-new-tokens', type=int, default=128, help='Max new tokens for eval generation')
     
     args = parser.parse_args()
     
@@ -215,6 +277,19 @@ Examples:
         run_multimodal_test()
     elif args.mode == 'demo':
         run_demo()
+    elif args.mode == 'eval':
+        run_eval(
+            dataset_path=args.eval_dataset,
+            output_path=args.eval_output,
+            generate_answers=args.generate_answers,
+            dry_run=args.dry_run,
+            max_cases=args.max_cases,
+            generated_output=args.generated_output,
+            generation_timeout_sec=args.generation_timeout_sec,
+            generate_only=args.generate_only,
+            score_only=args.score_only,
+            eval_max_new_tokens=args.eval_max_new_tokens,
+        )
 
 
 if __name__ == '__main__':

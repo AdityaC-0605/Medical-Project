@@ -6,6 +6,7 @@ import streamlit as st
 import os
 import sys
 import logging
+import time
 from datetime import datetime
 
 # Setup environment for Mac optimization
@@ -15,7 +16,14 @@ os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["MALLOC_ARENA_MAX"] = "2"
 
-# Get logger (configuration done in main.py)
+# Configure app logging for Streamlit subprocess as well.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    force=True,
+)
+
+# Get logger
 logger = logging.getLogger(__name__)
 
 # Add current directory to path for imports
@@ -58,9 +66,17 @@ st.markdown("""
 
 @st.cache_resource
 def get_medical_graph():
-    """Initialize MedicalGraph with model preloading."""
+    """Initialize MedicalGraph with optional model preloading."""
     try:
-        graph = MedicalGraph(preload_model=True)
+        preload_model = os.getenv("MEDICAL_STREAMLIT_PRELOAD", "0") == "1"
+        logger.info("STREAMLIT INIT: creating MedicalGraph (preload_model=%s)", preload_model)
+        start = time.perf_counter()
+        graph = MedicalGraph(preload_model=preload_model)
+        logger.info(
+            "STREAMLIT INIT: MedicalGraph ready in %.2fs (model_loaded=%s)",
+            time.perf_counter() - start,
+            graph._model_loaded,
+        )
         return graph
     except Exception as e:
         logger.error(f"Failed to initialize MedicalGraph: {e}")
@@ -70,10 +86,16 @@ def get_medical_graph():
 def process_diagnosis(text_input, image_file, metadata):
     """Process diagnosis request."""
     try:
+        request_start = time.perf_counter()
+        logger.info("REQUEST START: image=%s text_len=%s metadata_keys=%s",
+                    image_file is not None,
+                    len(text_input or ""),
+                    list((metadata or {}).keys()))
         # Prepare input data using preprocessor
         if image_file is not None:
             image_data = image_file.getvalue()
             image_filename = image_file.name
+            logger.info("PREPROCESS: image=%s size_kb=%.1f", image_filename, len(image_data) / 1024)
             input_data = preprocess_user_input(
                 text=text_input if text_input else None,
                 image_data=image_data,
@@ -81,10 +103,12 @@ def process_diagnosis(text_input, image_file, metadata):
                 metadata=metadata
             )
         else:
+            logger.info("PREPROCESS: text-only input")
             input_data = preprocess_user_input(
                 text=text_input,
                 metadata=metadata
             )
+        logger.info("PREPROCESS DONE: keys=%s", list(input_data.keys()))
         
         # Get graph instance
         graph = get_medical_graph()
@@ -95,8 +119,15 @@ def process_diagnosis(text_input, image_file, metadata):
         # Run workflow with progress updates
         progress_text = st.empty()
         progress_text.info("🔄 Analyzing... (~8-10 minutes)")
+        logger.info("WORKFLOW: run started")
         
         state = graph.run(input_data=input_data, cleanup_after=False)
+        logger.info(
+            "WORKFLOW: run finished in %.2fs | status=%s | task=%s",
+            time.perf_counter() - request_start,
+            getattr(state, "status", "unknown"),
+            getattr(state, "task_type", "unknown"),
+        )
         
         if state and state.status.value == "completed":
             progress_text.success("✅ Analysis complete!")
@@ -253,7 +284,7 @@ def main():
         )
         
         if image_file:
-            st.image(image_file, caption="Uploaded Image Preview", use_column_width=True)
+            st.image(image_file, caption="Uploaded Image Preview", width="stretch")
         
         st.markdown("##### 📝 Clinical Information (Optional but Recommended)")
         st.info("💡 Adding clinical context improves analysis accuracy significantly")

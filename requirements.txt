@@ -27,3 +27,8 @@ tqdm>=4.66.0
 
 # Development
 pytest>=7.4.0
+
+# Evaluation (RAGAS)
+ragas==0.1.21
+datasets>=2.18.0
+pandas>=2.0.0

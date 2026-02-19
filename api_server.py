@@ -35,8 +35,8 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Initialize components
-# Note: preload_model=False for memory efficiency - model loads per request
-medical_graph = MedicalGraph(preload_model=False)
+# Keep model warm for low-latency inference after startup.
+medical_graph = MedicalGraph(preload_model=True)
 input_preprocessor = InputPreprocessor(upload_dir="uploads")
 
 # Track request metrics
@@ -72,6 +72,7 @@ def handle_errors(f):
 
 def format_response(state, elapsed_time: float) -> Dict[str, Any]:
     """Format the workflow state into API response."""
+    structured_assessment = getattr(state, "structured_assessment", None) or {}
     response = {
         'success': state.status == WorkflowStatus.COMPLETED,
         'timestamp': datetime.now().isoformat(),
@@ -86,8 +87,11 @@ def format_response(state, elapsed_time: float) -> Dict[str, Any]:
     
     if state.status == WorkflowStatus.COMPLETED:
         response['result'] = {
-            'diagnosis': state.diagnosis,
-            'prescription': state.prescription
+            'structured_assessment': structured_assessment,
+            'clinical_summary': structured_assessment.get('clinical_summary', ''),
+            'primary_diagnosis': structured_assessment.get('primary_diagnosis', ''),
+            'treatment_plan': structured_assessment.get('treatment_plan', ''),
+            'follow_up': structured_assessment.get('follow_up', '')
         }
     
     return response
@@ -152,7 +156,7 @@ def diagnose_text():
     logger.info(f"  Preprocessed input type: {processed.input_type}")
     
     # Run workflow
-    state = medical_graph.run(input_data=input_data, cleanup_after=True)
+    state = medical_graph.run(input_data=input_data, cleanup_after=False)
     
     # Format response
     elapsed = time.time() - start_time
@@ -216,14 +220,15 @@ def diagnose_image():
     processed = input_preprocessor.process_image_upload(
         file_data=image_data,
         filename=image_file.filename,
-        accompanying_text=accompanying_text
+        accompanying_text=accompanying_text,
+        metadata=metadata
     )
     input_data = input_preprocessor.build_supervisor_input(processed)
     
     logger.info(f"  Inferred type: {processed.metadata.get('inferred_type', 'unknown')}")
     
     # Run workflow
-    state = medical_graph.run(input_data=input_data, cleanup_after=True)
+    state = medical_graph.run(input_data=input_data, cleanup_after=False)
     
     # Clean up uploaded file after processing
     if processed.image_path and os.path.exists(processed.image_path):
@@ -277,15 +282,27 @@ def diagnose():
             raise ValueError("No image file provided")
         
         image_file = request.files['image']
+        if image_file.filename == '':
+            raise ValueError("No image file selected")
         image_data = image_file.read()
+        if len(image_data) == 0:
+            raise ValueError("Empty image file")
         accompanying_text = request.form.get('text', '').strip() or None
+        
+        import json
+        metadata_str = request.form.get('metadata', '{}')
+        try:
+            metadata = json.loads(metadata_str)
+        except json.JSONDecodeError:
+            metadata = {}
         
         logger.info(f"[{request_count}] Universal endpoint - Image request")
         
         processed = input_preprocessor.process_image_upload(
             file_data=image_data,
             filename=image_file.filename,
-            accompanying_text=accompanying_text
+            accompanying_text=accompanying_text,
+            metadata=metadata
         )
         
         # Clean up after processing
@@ -310,7 +327,7 @@ def diagnose():
     
     # Build input and run
     input_data = input_preprocessor.build_supervisor_input(processed)
-    state = medical_graph.run(input_data=input_data, cleanup_after=True)
+    state = medical_graph.run(input_data=input_data, cleanup_after=False)
     
     # Clean up file if image was uploaded
     if cleanup_path and os.path.exists(cleanup_path):
@@ -357,7 +374,7 @@ def classify_only():
     input_data = input_preprocessor.build_supervisor_input(processed)
     
     # Just classify, don't run full workflow
-    task_type = medical_graph._classify_medical_task(input_data)
+    task_type = medical_graph._classify_with_medgemma_only(input_data)
     
     return jsonify({
         'success': True,

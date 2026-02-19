@@ -134,9 +134,35 @@ python main.py --mode demo
 # Run multimodal image classification tests
 python main.py --mode multimodal-test
 
+# Run RAGAS evaluation metrics
+python main.py --mode eval --generate-answers
+
 # Show help
 python main.py --help
 ```
+
+## Evaluation with RAGAS
+
+Use RAGAS to quantify answer quality, faithfulness to context, and relevance.
+
+```bash
+# Validate dataset format only
+python main.py --mode eval --dry-run
+
+# Generate answers using this project, then score with RAGAS
+python main.py --mode eval --generate-answers
+
+# Generate-only (slow), save answers for reuse
+python main.py --mode eval --generate-only --generated-output evaluation/results/generated_answers.jsonl
+
+# Score-only (fast), reusing saved answers
+python main.py --mode eval --score-only --eval-dataset evaluation/results/generated_answers.jsonl --eval-output evaluation/results/my_report.json
+```
+
+Evaluation assets:
+- `/Users/aditya/Documents/Medical-Project/evaluation/run_ragas.py`
+- `/Users/aditya/Documents/Medical-Project/evaluation/eval_cases.jsonl`
+- `/Users/aditya/Documents/Medical-Project/evaluation/README.md`
 
 ## 📖 Usage Examples
 

@@ -56,11 +56,15 @@ class MedGemmaClient:
             logger.info(f"  ✓ Image token {self.image_token} = ID {test_id}")
             
             logger.info("  └─ Loading model weights...")
-            torch_dtype = torch.float32 if str(self._device) == "mps" else torch.float16
+            # float16 on CPU is typically much slower than float32.
+            if str(self._device) == "cuda":
+                torch_dtype = torch.float16
+            else:
+                torch_dtype = torch.float32
             
             self.model = AutoModelForImageTextToText.from_pretrained(
                 self.model_id,
-                torch_dtype=torch_dtype,
+                dtype=torch_dtype,
                 device_map="auto",
                 low_cpu_mem_usage=True,
                 trust_remote_code=True,
@@ -230,7 +234,6 @@ class MedGemmaClient:
                 "eos_token_id": self.processor.tokenizer.eos_token_id,
                 "use_cache": True,
                 "num_beams": 1,
-                "early_stopping": True,
             }
             
             with torch.no_grad():

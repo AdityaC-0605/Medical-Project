@@ -18,9 +18,10 @@ TaskType = Literal["ct_coronary", "lipid_profile", "breast_imaging", "biopsy_rep
 
 
 class MedicalGraph:
-    def __init__(self, preload_model: bool = True):
+    def __init__(self, preload_model: bool = True, diagnosis_max_new_tokens: int = 256):
         self.medgemma: Optional[MedGemmaClient] = None
         self._model_loaded = False
+        self.diagnosis_max_new_tokens = diagnosis_max_new_tokens
         
         logger.info("=" * 80)
         logger.info("🏥 MEDICAL GRAPH INITIALIZATION")
@@ -234,7 +235,7 @@ class MedicalGraph:
             structured_assessment = self.medgemma.generate_structured_assessment(
                 task_type=task_type,
                 input_data=input_data,
-                max_new_tokens=256  # Slightly more room for detailed summary and diagnosis
+                max_new_tokens=self.diagnosis_max_new_tokens
             )
             
             state.structured_assessment = structured_assessment
@@ -311,7 +312,7 @@ class SequentialWorkflow:
         elif task_type == "lipid_profile":
             state = self.graph._lipid_profile_node(state)
         elif task_type == "breast_imaging":
-            state = self.graph._graph._breast_imaging_node(state)
+            state = self.graph._breast_imaging_node(state)
         elif task_type == "biopsy_report":
             state = self.graph._biopsy_report_node(state)
         else:
