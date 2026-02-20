@@ -245,6 +245,9 @@ class MedicalGraph:
             return state
             
         except Exception as e:
+            if e.__class__.__name__ == "GenerationTimeout":
+                # Propagate eval timeout to caller so it can mark timeout explicitly.
+                raise
             logger.error(f"❌ DIAGNOSE ERROR: {e}")
             import traceback
             logger.error(traceback.format_exc())
