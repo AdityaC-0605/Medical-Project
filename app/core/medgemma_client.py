@@ -1,5 +1,6 @@
 """MedGemma Client - Fixed image handling for Gemma3"""
 
+import json
 import logging
 import os
 import re
@@ -297,51 +298,108 @@ class MedGemmaClient:
             return ""
     
     def _build_structured_prompt(self, task_type: str, input_data: Dict[str, Any]) -> str:
-        """Build optimized medical prompt for better quality without increasing time."""
+        """Build task-aware, grounded prompt with strict JSON output schema."""
         text_content = input_data.get("text_content", "")
-        has_text = bool(text_content and len(text_content.strip()) > 10)
-        
-        experts = {
-            "ct_coronary": ("cardiologist", "cardiac CT", "coronary arteries, stenosis severity, plaque type"),
-            "breast_imaging": ("radiologist", "breast imaging", "masses, calcifications, BI-RADS category"),
-            "lipid_profile": ("cardiologist", "lipid panel", "cholesterol levels, cardiovascular risk"),
-            "biopsy_report": ("pathologist", "biopsy", "histological type, grade, margins")
+        strict_grounding = bool(input_data.get("strict_grounding", False))
+        has_text = bool(text_content and text_content.strip())
+
+        task_cfg = {
+            "ct_coronary": {
+                "role": "cardiologist",
+                "task": "coronary CT interpretation",
+                "rules": (
+                    "- Prioritize left main/proximal LAD risk and symptom burden.\n"
+                    "- State urgency for cardiology/invasive evaluation when high-risk anatomy is present.\n"
+                    "- Do not claim ACS/MI unless explicitly stated."
+                ),
+            },
+            "breast_imaging": {
+                "role": "breast radiologist",
+                "task": "breast imaging assessment",
+                "rules": (
+                    "- Use BI-RADS language when available.\n"
+                    "- Distinguish BI-RADS 3 surveillance from BI-RADS 4/5 biopsy pathway.\n"
+                    "- Do not assign definitive cancer diagnosis without pathology."
+                ),
+            },
+            "lipid_profile": {
+                "role": "preventive cardiology specialist",
+                "task": "lipid and cardiometabolic risk assessment",
+                "rules": (
+                    "- Use available LDL/HDL/triglycerides and comorbidity risk factors.\n"
+                    "- Focus on risk reduction strategy and follow-up interval.\n"
+                    "- Avoid unsupported medication dosing details."
+                ),
+            },
+            "biopsy_report": {
+                "role": "pathologist-oncology consultant",
+                "task": "pathology-driven oncologic assessment",
+                "rules": (
+                    "- Use histology, grade, receptors, margins, and adverse features if present.\n"
+                    "- Differentiate in-situ from invasive disease.\n"
+                    "- Keep recommendations at planning level; avoid unsupported staging."
+                ),
+            },
         }
-        
-        role, task, focus = experts.get(task_type, ("expert", "case", "findings"))
-        
-        # Context section only if text is provided
-        context_section = f"\nAdditional clinical context: {text_content[:300]}" if has_text else ""
-        
-        prompt = f"""You are an expert {role}. Analyze this {task}.{context_section}
+        cfg = task_cfg.get(
+            task_type,
+            {
+                "role": "clinical specialist",
+                "task": "medical case assessment",
+                "rules": "- Use only available evidence and avoid unsupported assumptions.",
+            },
+        )
 
-Provide a structured medical assessment with these exact sections:
+        strict_clause = (
+            "Grounding rule: only use facts explicitly present in the context. "
+            "If missing, write 'insufficient evidence'."
+        )
+        if strict_grounding:
+            strict_clause += " Strict mode: do not infer severity, treatment, or timing beyond stated evidence."
 
-CLINICAL SUMMARY: Describe the key findings and observations in 3-4 sentences. Include specific abnormalities, their location, severity, and clinical significance. Mention relevant measurements or grades (e.g. {focus}).
+        context_block = text_content[:900] if has_text else "No additional context provided."
+        json_schema = (
+            '{\n'
+            '  "clinical_summary": "string",\n'
+            '  "primary_diagnosis": "string",\n'
+            '  "treatment_plan": "string",\n'
+            '  "follow_up": "string",\n'
+            '  "urgency": "routine|expedited|urgent",\n'
+            '  "confidence": "low|medium|high",\n'
+            '  "evidence_snippets": "short quoted facts from context, separated by ;",\n'
+            '  "red_flags": "string",\n'
+            '  "next_best_test": "string"\n'
+            '}'
+        )
 
-PRIMARY DIAGNOSIS: State the main diagnosis in 2 sentences. Include severity, extent, and risk category if applicable.
+        return f"""You are an expert {cfg["role"]}. Perform a {cfg["task"]}.
 
-TREATMENT PLAN: List specific interventions, medications, or procedures in 2-3 sentences. Include drug names or procedure types where relevant.
+Task-specific guidance:
+{cfg["rules"]}
 
-FOLLOW-UP PLAN: Specify timing and type of follow-up care in 1-2 sentences.
+Clinical context:
+{context_block}
 
-Important: Use plain text only. Do not use markdown formatting, asterisks, or bullet points. Be specific and clinical."""
-        
-        return prompt
+Output requirement:
+- Return EXACTLY one JSON object, no markdown and no extra text.
+- Use concise clinical language.
+- If evidence is missing for a field, set the value to "insufficient evidence".
+- {strict_clause}
+
+Required JSON schema:
+{json_schema}
+"""
     
     def _parse_structured_output(self, text: str) -> Dict[str, str]:
-        """Parse structured output."""
-        result = {
-            "clinical_summary": "",
-            "primary_diagnosis": "",
-            "differentials": "",
-            "treatment_plan": "",
-            "lifestyle_recommendations": "",
-            "follow_up": ""
-        }
+        """Parse model output, preferring strict JSON then legacy header parsing."""
+        result = self._empty_assessment()
         
         if not text:
             return result
+
+        json_parsed = self._parse_json_assessment(text)
+        if json_parsed:
+            return json_parsed
         
         sections = {
             "clinical_summary": ["SUMMARY:", "CLINICAL SUMMARY:", "ASSESSMENT:"],
@@ -387,32 +445,106 @@ Important: Use plain text only. Do not use markdown formatting, asterisks, or bu
             
             result[key] = content
         
+        return self._normalize_assessment(result)
+
+    def _empty_assessment(self) -> Dict[str, str]:
+        return {
+            "clinical_summary": "",
+            "primary_diagnosis": "",
+            "differentials": "",
+            "treatment_plan": "",
+            "lifestyle_recommendations": "",
+            "follow_up": "",
+            "urgency": "",
+            "confidence": "",
+            "evidence_snippets": "",
+            "red_flags": "",
+            "next_best_test": "",
+        }
+
+    def _normalize_assessment(self, data: Dict[str, Any]) -> Dict[str, str]:
+        result = self._empty_assessment()
+        alias_map = {
+            "clinical_summary": "clinical_summary",
+            "summary": "clinical_summary",
+            "primary_diagnosis": "primary_diagnosis",
+            "diagnosis": "primary_diagnosis",
+            "treatment_plan": "treatment_plan",
+            "treatment": "treatment_plan",
+            "follow_up": "follow_up",
+            "followup": "follow_up",
+            "urgency": "urgency",
+            "confidence": "confidence",
+            "evidence_snippets": "evidence_snippets",
+            "evidence": "evidence_snippets",
+            "red_flags": "red_flags",
+            "next_best_test": "next_best_test",
+            "differentials": "differentials",
+            "lifestyle_recommendations": "lifestyle_recommendations",
+        }
+
+        for src_key, value in data.items():
+            key = alias_map.get(str(src_key).strip().lower())
+            if not key:
+                continue
+            text_value = str(value).strip()
+            text_value = re.sub(r"\s+", " ", text_value)
+            result[key] = text_value
+
+        if not result["clinical_summary"]:
+            result["clinical_summary"] = "insufficient evidence"
+        if not result["primary_diagnosis"]:
+            result["primary_diagnosis"] = "insufficient evidence"
+        if not result["treatment_plan"]:
+            result["treatment_plan"] = "insufficient evidence"
+        if not result["follow_up"]:
+            result["follow_up"] = "insufficient evidence"
+        if result["urgency"] not in {"routine", "expedited", "urgent"}:
+            result["urgency"] = "expedited"
+        if result["confidence"] not in {"low", "medium", "high"}:
+            result["confidence"] = "medium"
         return result
+
+    def _extract_json_object(self, text: str) -> str:
+        clean = text.strip()
+        code_block = re.search(r"```(?:json)?\s*({[\s\S]*?})\s*```", clean, flags=re.IGNORECASE)
+        if code_block:
+            return code_block.group(1)
+        first = clean.find("{")
+        last = clean.rfind("}")
+        if first != -1 and last != -1 and last > first:
+            return clean[first:last + 1]
+        return ""
+
+    def _parse_json_assessment(self, text: str) -> Optional[Dict[str, str]]:
+        blob = self._extract_json_object(text)
+        if not blob:
+            return None
+        try:
+            parsed = json.loads(blob)
+        except Exception:
+            return None
+        if not isinstance(parsed, dict):
+            return None
+        return self._normalize_assessment(parsed)
     
     def _generate_fallback_response(self, task_type: str, input_data: Dict[str, Any]) -> Dict[str, str]:
         """Fallback response."""
-        return {
+        return self._normalize_assessment({
             "clinical_summary": f"Assessment for {task_type}.",
             "primary_diagnosis": "Error in analysis. Consult specialist.",
             "differentials": "Requires evaluation",
             "treatment_plan": "Specialist referral recommended",
             "lifestyle_recommendations": "Healthy lifestyle",
             "follow_up": "Schedule with provider"
-        }
+        })
     
     def _intelligent_text_split(self, text: str) -> Dict[str, str]:
         """Intelligently split text into sections when parser fails."""
         # Clean up the text
         text = text.strip()
         
-        result = {
-            "clinical_summary": "",
-            "primary_diagnosis": "",
-            "differentials": "",
-            "treatment_plan": "",
-            "lifestyle_recommendations": "",
-            "follow_up": ""
-        }
+        result = self._empty_assessment()
         
         if not text:
             result["clinical_summary"] = "No assessment generated"
@@ -464,7 +596,7 @@ Important: Use plain text only. Do not use markdown formatting, asterisks, or bu
         if not result["follow_up"]:
             result["follow_up"] = "Schedule follow-up with healthcare provider"
         
-        return result
+        return self._normalize_assessment(result)
     
     def cleanup(self):
         """Cleanup."""

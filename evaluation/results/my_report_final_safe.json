@@ -1,0 +1,190 @@
+{
+  "generated_at": "2026-02-20T19:28:50.499183",
+  "dataset": "/Users/aditya/Documents/Medical-Project/evaluation/eval_cases.jsonl",
+  "output": "/Users/aditya/Documents/Medical-Project/evaluation/results/my_report_final_safe.json",
+  "aggregate": {
+    "faithfulness": 0.4395694661948531,
+    "answer_relevancy": 0.8326712130538937,
+    "context_precision": 0.9583333332708334,
+    "context_recall": 1.0,
+    "answer_correctness": 0.721339641155454
+  },
+  "num_cases": 12,
+  "metrics": [
+    "faithfulness",
+    "answer_relevancy",
+    "context_precision",
+    "context_recall",
+    "answer_correctness"
+  ],
+  "per_case": [
+    {
+      "question": "58-year-old male with LDL 145 mg/dL, HDL 38 mg/dL, triglycerides 220 mg/dL, hypertension and diabetes.",
+      "answer": "clinical_summary: The patient has mixed dyslipidemia with elevated LDL and triglycerides, low HDL, and multiple major cardiovascular risk factors including diabetes and hypertension. primary_diagnosis: High-risk atherogenic dyslipidemia with elevated near-term ASCVD risk. treatment_plan: Initiate or intensify high-intensity statin therapy, optimize diabetes and blood pressure control, and implement structured diet, weight, and exercise interventions; consider add-on lipid lowering if LDL goals are not achieved. follow_up: Recheck fasting lipid panel and adherence in 6 to 12 weeks, then continue periodic risk-factor monitoring.",
+      "contexts": [
+        "In high-risk patients, intensive LDL lowering and risk factor management reduce cardiovascular events.",
+        "Lifestyle intervention with diet, exercise, and diabetes control should be combined with statin therapy."
+      ],
+      "ground_truth": "High cardiovascular risk dyslipidemia requiring intensive statin-based lipid lowering, risk factor optimization, and close follow-up.",
+      "faithfulness": 0.3684210526315789,
+      "answer_relevancy": 0.8357355388437343,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.8085058754142074
+    },
+    {
+      "question": "Cardiac CT shows severe calcified plaque in left main coronary artery with greater than 70% stenosis and moderate plaque in RCA.",
+      "answer": "clinical_summary: Cardiac CT demonstrates severe left main stenosis greater than 70% with additional RCA plaque, indicating extensive high-risk coronary atherosclerosis. primary_diagnosis: High-risk multivessel coronary artery disease with critical left main involvement. treatment_plan: Arrange urgent cardiology evaluation for invasive angiography and revascularization planning while optimizing secondary prevention with antiplatelet strategy, high-intensity statin, and strict risk-factor control. follow_up: Expedite specialist follow-up within days and reassess symptoms, hemodynamic risk, and treatment response closely.",
+      "contexts": [
+        "Left main coronary artery severe stenosis represents high-risk coronary artery disease and usually warrants urgent specialist evaluation for revascularization decisions.",
+        "Secondary prevention includes antiplatelet strategy, high-intensity statin, blood pressure and glycemic control, and structured follow-up."
+      ],
+      "ground_truth": "Severe high-risk multivessel coronary artery disease with urgent cardiology referral for angiography or revascularization planning and optimized medical therapy.",
+      "faithfulness": 0.45454545454545453,
+      "answer_relevancy": 0.8688611996097273,
+      "context_precision": 0.9999999999,
+      "context_recall": 1.0,
+      "answer_correctness": 0.6645521340511746
+    },
+    {
+      "question": "46-year-old female, screening mammogram reports clustered pleomorphic calcifications in upper outer quadrant, BI-RADS 4.",
+      "answer": "clinical_summary: Screening mammogram shows clustered pleomorphic calcifications in the upper outer quadrant categorized as BI-RADS 4, a suspicious imaging pattern. primary_diagnosis: Suspicious breast lesion with concern for DCIS or other malignancy pending tissue diagnosis. treatment_plan: Proceed with image-guided core needle biopsy and coordinate prompt breast specialist review to determine definitive pathology-directed care. follow_up: Ensure biopsy is scheduled promptly and review pathology results urgently to finalize management.",
+      "contexts": [
+        "BI-RADS 4 indicates suspicious abnormality and generally requires tissue diagnosis.",
+        "Pleomorphic clustered calcifications are associated with ductal carcinoma in situ and warrant biopsy."
+      ],
+      "ground_truth": "Suspicious breast imaging finding requiring image-guided core biopsy and timely breast specialist follow-up.",
+      "faithfulness": 0.2222222222222222,
+      "answer_relevancy": 0.8342906751592429,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.6235211056709891
+    },
+    {
+      "question": "Pathology report: invasive ductal carcinoma, grade 2, ER positive, PR positive, HER2 negative, Ki-67 18%.",
+      "answer": "clinical_summary: Pathology confirms grade 2 invasive ductal carcinoma with ER and PR positivity, HER2 negativity, and intermediate proliferation index. primary_diagnosis: Hormone receptor positive, HER2 negative invasive breast carcinoma requiring stage-based multidisciplinary treatment planning. treatment_plan: Complete staging and surgical oncology planning, then consider adjuvant endocrine-directed strategy with additional therapy determined by risk assessment and final pathology. follow_up: Discuss case in multidisciplinary breast tumor board and initiate oncology follow-up for definitive treatment sequencing.",
+      "contexts": [
+        "ER and PR positive, HER2 negative tumors are often treated with endocrine therapy planning after staging.",
+        "Tumor grade and receptor profile guide prognosis and adjuvant treatment recommendations."
+      ],
+      "ground_truth": "Hormone receptor positive breast carcinoma with management focused on staging, surgical planning, and endocrine-based adjuvant strategy.",
+      "faithfulness": 0.5,
+      "answer_relevancy": 0.8239021142085985,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.976762604949919
+    },
+    {
+      "question": "62-year-old male with LDL 190 mg/dL despite lifestyle changes, family history of premature MI.",
+      "answer": "clinical_summary: Persistently very high LDL despite lifestyle intervention plus family history of premature MI indicates severe inherited-risk lipid disorder profile. primary_diagnosis: Severe hypercholesterolemia with elevated inherited ASCVD risk. treatment_plan: Start or intensify high-intensity statin therapy and consider early add-on lipid-lowering therapy if targets are not met; continue aggressive risk-factor modification. follow_up: Reassess lipid levels in 6 to 12 weeks and monitor long-term cardiovascular risk reduction strategy.",
+      "contexts": [
+        "Very high LDL levels suggest severe hypercholesterolemia and usually require high-intensity statin therapy.",
+        "Family history of premature ASCVD increases risk and supports aggressive lipid lowering."
+      ],
+      "ground_truth": "Severe hypercholesterolemia requiring high-intensity lipid-lowering treatment and close cardiovascular risk management.",
+      "faithfulness": 0.3,
+      "answer_relevancy": 0.8946251357331357,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.6354184418459857
+    },
+    {
+      "question": "Coronary CT angiography: proximal LAD stenosis approximately 75%, non-calcified plaque, patient has exertional angina.",
+      "answer": "clinical_summary: CCTA shows significant proximal LAD narrowing around 75% with symptomatic exertional angina, consistent with clinically important ischemic burden. primary_diagnosis: Symptomatic obstructive coronary artery disease with high ischemic risk. treatment_plan: Arrange urgent cardiology assessment for invasive risk stratification and potential revascularization while optimizing anti-ischemic and secondary prevention medical therapy. follow_up: Close short-interval follow-up is required to monitor symptoms and finalize definitive management.",
+      "contexts": [
+        "Significant proximal LAD stenosis with anginal symptoms indicates high ischemic risk.",
+        "Management typically includes urgent cardiology evaluation and consideration of invasive assessment."
+      ],
+      "ground_truth": "Hemodynamically significant symptomatic coronary disease requiring urgent cardiology-directed escalation of management.",
+      "faithfulness": 0.36363636363636365,
+      "answer_relevancy": 0.7618550640948407,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.6106678611273471
+    },
+    {
+      "question": "Breast ultrasound reveals irregular hypoechoic mass with spiculated margins, BI-RADS 5.",
+      "answer": "clinical_summary: Ultrasound demonstrates an irregular spiculated hypoechoic mass categorized as BI-RADS 5, which is highly suspicious for malignancy. primary_diagnosis: Probable breast malignancy pending histopathologic confirmation. treatment_plan: Expedite tissue diagnosis with core biopsy and activate multidisciplinary breast oncology pathway for definitive staging and treatment planning. follow_up: Urgent specialist follow-up is indicated immediately after biopsy results are available.",
+      "contexts": [
+        "BI-RADS 5 is highly suggestive of malignancy and requires prompt tissue diagnosis.",
+        "Spiculated irregular masses are high-risk imaging features for breast cancer."
+      ],
+      "ground_truth": "Highly suspicious breast lesion requiring urgent biopsy and multidisciplinary oncology pathway initiation.",
+      "faithfulness": 0.4444444444444444,
+      "answer_relevancy": 0.8919107876681452,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.4367126260579165
+    },
+    {
+      "question": "Biopsy: adenocarcinoma with perineural invasion, margins involved.",
+      "answer": "clinical_summary: Biopsy confirms adenocarcinoma with perineural invasion and involved margins, both adverse pathologic features. primary_diagnosis: High-risk adenocarcinoma with residual local disease risk due to positive margins. treatment_plan: Refer for multidisciplinary oncologic management with margin-directed re-excision or additional local therapy and risk-adapted adjuvant planning. follow_up: Expedite surgical and oncology follow-up to finalize local control and recurrence-risk mitigation strategy.",
+      "contexts": [
+        "Perineural invasion is an adverse histopathologic feature associated with higher recurrence risk.",
+        "Positive margins generally require re-excision or additional local therapy planning."
+      ],
+      "ground_truth": "Adverse-pathology malignancy with involved margins requiring additional oncologic treatment planning and margin control.",
+      "faithfulness": 0.2222222222222222,
+      "answer_relevancy": 0.7692817466320779,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.6232714971972491
+    },
+    {
+      "question": "55-year-old with HDL 30, triglycerides 320, LDL 130, obesity and poorly controlled diabetes.",
+      "answer": "clinical_summary: The profile shows atherogenic dyslipidemia with markedly elevated triglycerides, low HDL, elevated LDL, obesity, and uncontrolled diabetes. primary_diagnosis: Mixed dyslipidemia with substantial cardiometabolic and ASCVD risk. treatment_plan: Initiate comprehensive risk reduction with lipid-lowering pharmacotherapy, diabetes optimization, weight-focused lifestyle intervention, and triglyceride-focused management as indicated. follow_up: Reevaluate metabolic and lipid response in 6 to 12 weeks and adjust therapy to risk-based targets.",
+      "contexts": [
+        "Atherogenic dyslipidemia with high triglycerides and low HDL increases cardiometabolic risk.",
+        "Management should combine lipid optimization with glycemic control, weight reduction, and lifestyle intervention."
+      ],
+      "ground_truth": "Mixed dyslipidemia with elevated cardiometabolic risk requiring combined pharmacologic and lifestyle risk-reduction strategy.",
+      "faithfulness": 0.5294117647058824,
+      "answer_relevancy": 0.7491902487797598,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.9294490135659235
+    },
+    {
+      "question": "CT report notes 50% left main narrowing and 60% mid-LCX stenosis, persistent chest tightness.",
+      "answer": "clinical_summary: CT findings show intermediate left main and LCX stenoses with persistent ischemic symptoms, suggesting clinically significant multivessel coronary disease. primary_diagnosis: Symptomatic intermediate-to-severe multivessel CAD with elevated prognostic risk from left main involvement. treatment_plan: Arrange expedited cardiology evaluation for ischemia-guided invasive assessment and optimize anti-ischemic plus secondary prevention therapy. follow_up: Close short-term follow-up is needed to reassess symptoms and determine definitive intervention strategy.",
+      "contexts": [
+        "Left main disease carries elevated prognostic risk even at intermediate stenosis.",
+        "Persistent ischemic symptoms with multivessel disease should trigger specialist evaluation and risk-stratified management."
+      ],
+      "ground_truth": "Intermediate-to-severe multivessel coronary disease with symptoms requiring expedited cardiology evaluation and treatment optimization.",
+      "faithfulness": 0.45454545454545453,
+      "answer_relevancy": 0.8301005845336688,
+      "context_precision": 0.49999999995,
+      "context_recall": 1.0,
+      "answer_correctness": 0.970520612681223
+    },
+    {
+      "question": "Mammogram shows asymmetry without suspicious calcifications, BI-RADS 3 recommendation for short-interval follow-up.",
+      "answer": "clinical_summary: Mammography demonstrates a probably benign asymmetry without high-risk calcifications and is classified BI-RADS 3. primary_diagnosis: Probably benign breast imaging finding appropriate for surveillance rather than immediate biopsy. treatment_plan: Follow BI-RADS 3 protocol with short-interval repeat imaging and escalate to tissue diagnosis only if interval progression or new suspicious features appear. follow_up: Schedule interval imaging follow-up as recommended and provide clear return precautions for symptom or imaging change.",
+      "contexts": [
+        "BI-RADS 3 indicates probably benign finding and short-interval imaging surveillance is recommended.",
+        "Escalation to biopsy is generally reserved for interval progression or suspicious change."
+      ],
+      "ground_truth": "Probably benign breast finding best managed with short-interval repeat imaging and clear follow-up instructions.",
+      "faithfulness": 0.6153846153846154,
+      "answer_relevancy": 0.8938428419928677,
+      "context_precision": 0.9999999999,
+      "context_recall": 1.0,
+      "answer_correctness": 0.4711793617835477
+    },
+    {
+      "question": "Pathology specimen: high-grade ductal carcinoma in situ with comedo necrosis.",
+      "answer": "clinical_summary: Pathology indicates high-grade DCIS with comedo necrosis, a higher-risk in situ breast neoplasm with increased local recurrence potential. primary_diagnosis: High-risk ductal carcinoma in situ requiring definitive local control planning. treatment_plan: Proceed with multidisciplinary planning for surgery and margin optimization, with adjuvant radiation consideration based on final pathology and operative findings. follow_up: Prompt breast oncology follow-up is required to finalize treatment sequencing and surveillance planning.",
+      "contexts": [
+        "High-grade DCIS with comedo necrosis carries higher local recurrence risk and requires definitive local treatment planning.",
+        "Management decisions include surgery type, margin assessment, and radiation consideration."
+      ],
+      "ground_truth": "High-risk in situ breast malignancy requiring definitive local control planning with multidisciplinary oncology input.",
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.8384586193909248,
+      "context_precision": 0.9999999999,
+      "context_recall": 1.0,
+      "answer_correctness": 0.9055145595199668
+    }
+  ]
+}

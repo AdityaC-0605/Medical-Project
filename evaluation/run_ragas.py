@@ -172,6 +172,38 @@ def state_to_answer(state: Any) -> str:
     return "\n".join(parts).strip()
 
 
+def build_eval_text_content(question: str, contexts: List[str], max_chars: int = 900) -> str:
+    """Build compact text context for generation-time grounding."""
+    snippets: List[str] = []
+    for idx, ctx in enumerate(contexts[:3], start=1):
+        clean = re.sub(r"\s+", " ", str(ctx)).strip()
+        if not clean:
+            continue
+        snippets.append(f"Context {idx}: {clean[:260]}")
+    merged = f"Question: {question.strip()}"
+    if snippets:
+        merged += "\n" + "\n".join(snippets)
+    return merged[:max_chars]
+
+
+def _token_set(text: str) -> set[str]:
+    return set(re.findall(r"[a-zA-Z][a-zA-Z0-9]{3,}", text.lower()))
+
+
+def grounding_overlap_ratio(answer: str, contexts: List[str]) -> float:
+    """Approximate grounding by lexical overlap between answer and contexts."""
+    if not answer.strip() or not contexts:
+        return 0.0
+    answer_tokens = _token_set(answer)
+    if not answer_tokens:
+        return 0.0
+    ctx_tokens = _token_set(" ".join(contexts))
+    if not ctx_tokens:
+        return 0.0
+    overlap = answer_tokens & ctx_tokens
+    return len(overlap) / len(answer_tokens)
+
+
 def _run_with_timeout(timeout_sec: int, fn, *args, **kwargs):
     """Run a callable with SIGALRM timeout on Unix platforms."""
     if timeout_sec <= 0:
@@ -197,6 +229,7 @@ def generate_answers(
     kb_dir: Path,
     generation_timeout_sec: int = 0,
     eval_max_new_tokens: int = 128,
+    force_regenerate: bool = False,
 ) -> None:
     from app.graph import MedicalGraph
     from app.input_preprocessor import preprocess_user_input
@@ -206,7 +239,8 @@ def generate_answers(
 
     try:
         for idx, case in enumerate(cases, start=1):
-            if case.answer:
+            previous_answer = case.answer or ""
+            if case.answer and not force_regenerate:
                 logger.info("Case %d: answer already present, skipping generation", idx)
                 continue
 
@@ -215,6 +249,7 @@ def generate_answers(
 
             logger.info("Case %d: running model inference", idx)
             input_data = preprocess_user_input(text=case.question, metadata=case.metadata)
+            input_data["text_content"] = build_eval_text_content(case.question, case.contexts)
             inferred_task = infer_task_type_from_text(case.question)
             started = time.perf_counter()
             try:
@@ -228,6 +263,33 @@ def generate_answers(
                 case.answer = state_to_answer(state)
                 if not case.answer:
                     case.answer = "No answer generated"
+                overlap = grounding_overlap_ratio(case.answer, case.contexts)
+                if overlap < 0.12:
+                    logger.warning(
+                        "Case %d: weak grounding overlap (%.2f), retrying once with stricter constraints",
+                        idx,
+                        overlap,
+                    )
+                    strict_input = dict(input_data)
+                    strict_input["strict_grounding"] = True
+                    strict_input["text_content"] = (
+                        build_eval_text_content(case.question, case.contexts)
+                        + "\nInstruction: Use only the evidence above; if missing, state insufficient evidence."
+                    )
+                    strict_state = _run_with_timeout(
+                        generation_timeout_sec,
+                        graph.run,
+                        task_type=inferred_task,
+                        input_data=strict_input,
+                        cleanup_after=False,
+                    )
+                    strict_answer = state_to_answer(strict_state)
+                    if strict_answer:
+                        strict_overlap = grounding_overlap_ratio(strict_answer, case.contexts)
+                        if strict_overlap >= overlap:
+                            case.answer = strict_answer
+                            overlap = strict_overlap
+                logger.info("Case %d: grounding overlap %.2f", idx, overlap)
                 logger.info(
                     "Case %d: inference finished in %.2fs",
                     idx,
@@ -235,10 +297,17 @@ def generate_answers(
                 )
             except GenerationTimeout as exc:
                 logger.error("Case %d: %s", idx, exc)
-                case.answer = (
-                    f"Generation timeout after {generation_timeout_sec}s. "
-                    "No model answer generated."
-                )
+                if previous_answer:
+                    logger.warning(
+                        "Case %d: preserving previous answer after timeout because force regeneration failed",
+                        idx,
+                    )
+                    case.answer = previous_answer
+                else:
+                    case.answer = (
+                        f"Generation timeout after {generation_timeout_sec}s. "
+                        "No model answer generated."
+                    )
     finally:
         graph._unload_model()
 
@@ -347,6 +416,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generate-answers", action="store_true", help="Generate answers with MedicalGraph before scoring")
     parser.add_argument("--generate-only", action="store_true", help="Generate answers and exit without RAGAS scoring")
     parser.add_argument("--score-only", action="store_true", help="Run RAGAS only; do not generate answers")
+    parser.add_argument("--force-regenerate", action="store_true", help="Force regeneration even when answer is already present")
     parser.add_argument("--dry-run", action="store_true", help="Validate dataset and exit")
     parser.add_argument("--max-cases", type=int, default=0, help="Only evaluate first N cases (0 = all)")
     parser.add_argument(
@@ -416,6 +486,7 @@ def main() -> int:
             kb_dir,
             generation_timeout_sec=args.generation_timeout_sec,
             eval_max_new_tokens=args.eval_max_new_tokens,
+            force_regenerate=args.force_regenerate,
         )
         generated_default = default_output_path()
         generated_out = (

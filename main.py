@@ -112,16 +112,18 @@ def run_demo():
 def run_eval(dataset_path: str, output_path: str = "", generate_answers: bool = False,
              dry_run: bool = False, max_cases: int = 0, generated_output: str = "",
              generation_timeout_sec: int = 600, generate_only: bool = False,
-             score_only: bool = False, eval_max_new_tokens: int = 128):
+             score_only: bool = False, eval_max_new_tokens: int = 128,
+             force_regenerate: bool = False):
     """Run RAGAS evaluation workflow."""
     import subprocess
     import sys
 
+    effective_generate = generate_answers or generate_only
     print("\n" + "="*70)
     print("RAGAS EVALUATION")
     print("="*70)
     print(f"Dataset: {dataset_path}")
-    print(f"Generate answers: {generate_answers}")
+    print(f"Generate answers: {effective_generate}")
     if output_path:
         print(f"Output: {output_path}")
     print("="*70 + "\n")
@@ -135,6 +137,8 @@ def run_eval(dataset_path: str, output_path: str = "", generate_answers: bool = 
         cmd.append("--generate-only")
     if score_only:
         cmd.append("--score-only")
+    if force_regenerate:
+        cmd.append("--force-regenerate")
     if dry_run:
         cmd.append("--dry-run")
     if max_cases > 0:
@@ -259,6 +263,7 @@ Examples:
     parser.add_argument('--generation-timeout-sec', type=int, default=600, help='Per-case timeout for eval generation (seconds)')
     parser.add_argument('--generate-only', action='store_true', help='Generate eval answers only (no RAGAS scoring)')
     parser.add_argument('--score-only', action='store_true', help='Run RAGAS scoring only using existing answers in dataset')
+    parser.add_argument('--force-regenerate', action='store_true', help='Force regeneration even if answers already exist')
     parser.add_argument('--eval-max-new-tokens', type=int, default=128, help='Max new tokens for eval generation')
     
     args = parser.parse_args()
@@ -289,6 +294,7 @@ Examples:
             generate_only=args.generate_only,
             score_only=args.score_only,
             eval_max_new_tokens=args.eval_max_new_tokens,
+            force_regenerate=args.force_regenerate,
         )
 
 
