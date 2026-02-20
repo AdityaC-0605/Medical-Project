@@ -268,6 +268,9 @@ class MedGemmaClient:
             return self._generate_fallback_response(task_type, input_data)
                 
         except Exception as e:
+            if e.__class__.__name__ == "GenerationTimeout":
+                # Let evaluation timeout handling decide the fallback behavior.
+                raise
             logger.error(f"❌ Assessment error: {e}")
             import traceback
             logger.error(traceback.format_exc())
